@@ -111,7 +111,7 @@ int main(int arc, char **argv)
 	system_script_init();
 
 	system_init();
-
+system_init();
 	os_start(&layout_logo);
 
 	return 0;
