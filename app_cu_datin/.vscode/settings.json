@@ -1,0 +1,11 @@
+{
+    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.intelliSenseEngineFallback": "Disabled",
+    "files.associations": {
+        "language.h": "c",
+        "layout_base.h": "c",
+        "string.h": "c",
+        "leo_audio_play.h": "c"
+    },
+
+}

@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.H": "c",
+        "MAIN.C": "cpp"
+    }
+}

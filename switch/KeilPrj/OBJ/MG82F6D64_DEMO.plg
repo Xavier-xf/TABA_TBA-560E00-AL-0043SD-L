@@ -1,0 +1,595 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+C:\Users\kevin\Desktop\MG82F6D64_GPIO_Mode\KeilPrj\kevin.uvproj
+Project File Date:  03/08/2022
+
+<h2>Output:</h2>
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(194): warning C280: 'i': unreferenced local variable
+linking...
+Program Size: data=10.0 xdata=0 code=100
+creating hex file from ".\OBJ\kevin"...
+".\OBJ\kevin" - 0 Error(s), 1 Warning(s).
+Build target 'Target 1'
+compiling MAIN.C...
+linking...
+Program Size: data=9.0 xdata=0 code=100
+creating hex file from ".\OBJ\kevin"...
+".\OBJ\kevin" - 0 Error(s), 0 Warning(s).
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+..\code\kevin_function.c(2): warning C318: can't open file 'kevin_function.h'
+..\code\kevin_function.c(3): warning C318: can't open file 'interrupt.h'
+..\code\kevin_function.c(4): warning C318: can't open file 'drv_gpio.h'
+..\code\kevin_function.c(5): warning C318: can't open file 'fw_update.h'
+..\code\kevin_function.c(7): warning C318: can't open file 'drv_iap.h'
+..\CODE\KEVIN_FUNCTION.C(12): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(13): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(14): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(15): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(16): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(17): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(18): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(19): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(32): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(33): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(34): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(35): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(36): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(38): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(39): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(40): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(42): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(43): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(44): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(46): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(47): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(48): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(51): error C202: 'TIMER1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(63): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(64): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(65): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(66): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(68): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(69): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(71): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(72): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(74): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(75): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(89): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(90): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(91): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(92): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(94): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(95): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(97): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(98): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(100): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(101): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(103): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(104): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(105): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(106): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(107): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(128): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(129): error C202: 'RXD_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(131): error C202: 'DRV_GPIO_PORT0': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(132): error C202: 'UNLOCK_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(135): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(136): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(137): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(138): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(139): error C202: 'POWER_HOME1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(140): error C202: 'POWER_HOME2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(141): error C202: 'POWER_HOME3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(142): error C202: 'POWER_HOME4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(149): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(151): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(154): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(155): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(156): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(157): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(159): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(160): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(161): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(162): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(164): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(165): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(166): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(167): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(170): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(189): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(190): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(190): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(192): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(193): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(201): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(202): error C202: 'HOME1_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(203): error C202: 'HOME2_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(204): error C202: 'HOME3_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(205): error C202: 'HOME4_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(221): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(222): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(222): error C141: syntax error near 'tmp'
+..\CODE\KEVIN_FUNCTION.C(224): error C202: 'tmp': undefined identifier
+Target not created
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+..\code\msg_event.c - 1 Error(s), 4 Warning(s).
+Build target 'Target 1'
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+..\code\kevin_function.c(2): warning C318: can't open file 'kevin_function.h'
+..\code\kevin_function.c(3): warning C318: can't open file 'interrupt.h'
+..\code\kevin_function.c(4): warning C318: can't open file 'drv_gpio.h'
+..\code\kevin_function.c(5): warning C318: can't open file 'fw_update.h'
+..\code\kevin_function.c(7): warning C318: can't open file 'drv_iap.h'
+..\CODE\KEVIN_FUNCTION.C(12): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(13): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(14): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(15): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(16): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(17): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(18): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(19): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(32): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(33): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(34): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(35): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(36): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(38): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(39): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(40): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(42): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(43): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(44): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(46): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(47): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(48): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(51): error C202: 'TIMER1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(63): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(64): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(65): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(66): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(68): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(69): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(71): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(72): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(74): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(75): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(89): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(90): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(91): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(92): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(94): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(95): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(97): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(98): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(100): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(101): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(103): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(104): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(105): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(106): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(107): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(128): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(129): error C202: 'RXD_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(131): error C202: 'DRV_GPIO_PORT0': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(132): error C202: 'UNLOCK_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(135): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(136): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(137): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(138): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(139): error C202: 'POWER_HOME1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(140): error C202: 'POWER_HOME2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(141): error C202: 'POWER_HOME3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(142): error C202: 'POWER_HOME4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(149): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(151): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(154): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(155): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(156): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(157): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(159): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(160): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(161): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(162): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(164): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(165): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(166): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(167): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(170): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(189): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(190): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(190): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(192): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(193): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(201): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(202): error C202: 'HOME1_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(203): error C202: 'HOME2_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(204): error C202: 'HOME3_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(205): error C202: 'HOME4_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(221): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(222): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(222): error C141: syntax error near 'tmp'
+..\CODE\KEVIN_FUNCTION.C(224): error C202: 'tmp': undefined identifier
+Target not created
+Build target 'Target 1'
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+..\code\kevin_function.c(2): warning C318: can't open file 'kevin_function.h'
+..\code\kevin_function.c(3): warning C318: can't open file 'interrupt.h'
+..\code\kevin_function.c(4): warning C318: can't open file 'drv_gpio.h'
+..\code\kevin_function.c(5): warning C318: can't open file 'fw_update.h'
+..\code\kevin_function.c(7): warning C318: can't open file 'drv_iap.h'
+..\CODE\KEVIN_FUNCTION.C(12): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(13): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(14): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(15): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(16): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(17): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(18): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(19): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(32): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(33): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(34): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(35): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(36): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(38): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(39): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(40): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(42): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(43): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(44): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(46): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(47): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(48): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(51): error C202: 'TIMER1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(63): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(64): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(65): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(66): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(68): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(69): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(71): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(72): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(74): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(75): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(89): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(90): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(91): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(92): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(94): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(95): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(97): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(98): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(100): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(101): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(103): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(104): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(105): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(106): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(107): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(128): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(129): error C202: 'RXD_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(131): error C202: 'DRV_GPIO_PORT0': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(132): error C202: 'UNLOCK_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(135): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(136): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(137): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(138): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(139): error C202: 'POWER_HOME1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(140): error C202: 'POWER_HOME2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(141): error C202: 'POWER_HOME3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(142): error C202: 'POWER_HOME4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(149): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(151): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(154): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(155): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(156): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(157): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(159): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(160): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(161): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(162): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(164): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(165): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(166): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(167): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(170): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(189): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(190): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(190): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(192): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(193): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(201): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(202): error C202: 'HOME1_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(203): error C202: 'HOME2_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(204): error C202: 'HOME3_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(205): error C202: 'HOME4_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(221): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(222): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(222): error C141: syntax error near 'tmp'
+..\CODE\KEVIN_FUNCTION.C(224): error C202: 'tmp': undefined identifier
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+..\code\kevin_function.c(2): warning C318: can't open file 'kevin_function.h'
+..\code\kevin_function.c(3): warning C318: can't open file 'interrupt.h'
+..\code\kevin_function.c(4): warning C318: can't open file 'drv_gpio.h'
+..\code\kevin_function.c(5): warning C318: can't open file 'fw_update.h'
+..\code\kevin_function.c(7): warning C318: can't open file 'drv_iap.h'
+..\CODE\KEVIN_FUNCTION.C(12): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(13): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(14): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(15): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(16): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(17): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(18): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(19): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(32): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(33): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(34): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(35): error C202: 'HOME1_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(36): error C202: 'HOME1_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(38): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(39): error C202: 'HOME2_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(40): error C202: 'HOME2_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(42): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(43): error C202: 'HOME3_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(44): error C202: 'HOME3_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(46): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(47): error C202: 'HOME4_RING_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(48): error C202: 'HOME4_CALL_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(51): error C202: 'TIMER1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(63): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(64): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(65): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(66): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(68): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(69): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(71): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(72): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(74): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(75): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(89): error C141: syntax error near 'ch', expected ')'
+..\CODE\KEVIN_FUNCTION.C(90): error C202: 'ch': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(91): error C202: 'HOME_ID1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(92): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(94): error C202: 'HOME_ID2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(95): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(97): error C202: 'HOME_ID3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(98): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(100): error C202: 'HOME_ID4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(101): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(103): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(104): error C202: 'AUDIO_VIDEO_CH1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(105): error C202: 'AUDIO_VIDEO_CH2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(106): error C202: 'AUDIO_VIDEO_CH3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(107): error C202: 'AUDIO_VIDEO_CH4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(128): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(129): error C202: 'RXD_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(131): error C202: 'DRV_GPIO_PORT0': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(132): error C202: 'UNLOCK_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(135): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(136): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(137): error C202: 'DRV_GPIO_PORT2': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(138): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(139): error C202: 'POWER_HOME1_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(140): error C202: 'POWER_HOME2_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(141): error C202: 'POWER_HOME3_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(142): error C202: 'POWER_HOME4_GPIO': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(149): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(151): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(154): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(155): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(156): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(157): error C202: 'DRV_GPIO_PORT1': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(159): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(160): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(161): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(162): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(164): error C202: 'DRV_GPIO_PORT3': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(165): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(166): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(167): error C202: 'DRV_GPIO_PORT4': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(170): error C202: 'TOTAL_HOME_ID': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(189): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(190): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(190): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(192): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(193): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(199): error C141: syntax error near 'i'
+..\CODE\KEVIN_FUNCTION.C(201): error C202: 'i': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(202): error C202: 'HOME1_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(203): error C202: 'HOME2_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(204): error C202: 'HOME3_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(205): error C202: 'HOME4_ID_ADDR': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(221): error C141: syntax error near 'addr', expected ')'
+..\CODE\KEVIN_FUNCTION.C(222): error C202: 'uint8_t': undefined identifier
+..\CODE\KEVIN_FUNCTION.C(222): error C141: syntax error near 'tmp'
+..\CODE\KEVIN_FUNCTION.C(224): error C202: 'tmp': undefined identifier
+Target not created
+Build target 'Target 1'
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file 'msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file './msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\code\msg_event.c(1): warning C318: can't open file '.\msg_event.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(11): error C129: missing ';' before 'EventQueue'
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(107): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(126): error C249: 'DATA': SEGMENT TOO LARGE
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\code\msg_event.c(2): warning C318: can't open file 'interrupt.h'
+..\code\msg_event.c(4): warning C318: can't open file 'kevin_function.h'
+..\code\msg_event.c(7): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(107): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(126): error C249: 'DATA': SEGMENT TOO LARGE
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\code\msg_event.c(6): warning C318: can't open file 'time.h'
+..\CODE\MSG_EVENT.C(106): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(125): error C249: 'DATA': SEGMENT TOO LARGE
+Target not created
+Build target 'Target 1'
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(105): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(124): error C249: 'DATA': SEGMENT TOO LARGE
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(99): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(118): error C249: 'DATA': SEGMENT TOO LARGE
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(98): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(117): error C249: 'DATA': SEGMENT TOO LARGE
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling MAIN.C...
+..\CODE\MAIN.C(202): warning C275: expression with possibly no effect
+..\CODE\MAIN.C(207): warning C206: 'msg_run': missing function-prototype
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(98): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(117): error C249: 'DATA': SEGMENT TOO LARGE
+compiling kevin_function.c...
+Target not created
+Build target 'Target 1'
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(98): warning C280: 'ev': unreferenced local variable
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_MSG_EVENT_POST?MSG_EVENT
+Program Size: data=38.0 xdata=0 code=828
+creating hex file from ".\OBJ\kevin"...
+".\OBJ\kevin" - 0 Error(s), 3 Warning(s).
+Build target 'Target 1'
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(98): warning C280: 'ev': unreferenced local variable
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_MSG_EVENT_POST?MSG_EVENT
+Program Size: data=108.0 xdata=0 code=828
+creating hex file from ".\OBJ\kevin"...
+".\OBJ\kevin" - 0 Error(s), 3 Warning(s).
+Build target 'Target 1'
+compiling msg_event.c...
+..\CODE\./INCLUDE/MSG_EVENT.H(3): warning C318: can't open file 'common.h'
+..\CODE\MSG_EVENT.C(98): warning C280: 'ev': unreferenced local variable
+..\CODE\MSG_EVENT.C(117): error C249: 'DATA': SEGMENT TOO LARGE
+Target not created

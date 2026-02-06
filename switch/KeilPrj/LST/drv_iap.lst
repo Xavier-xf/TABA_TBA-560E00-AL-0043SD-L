@@ -1,0 +1,159 @@
+C51 COMPILER V9.54   DRV_IAP                                                               12/22/2025 19:23:23 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DRV_IAP
+OBJECT MODULE PLACED IN .\OBJ\drv_iap.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\code\drv_iap.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\LST\drv_iap.lst) TABS(2) OBJECT(.\OBJ\drv_iap.obj)
+
+line level    source
+
+   1          /**
+   2           ******************************************************************************
+   3           *
+   4           * @file        drv_crc.c
+   5           *
+   6           * @brief       The driver code of CRC.
+   7           *
+   8           * @par         project
+   9           *              8051 serial
+  10           * @version     V0.01
+  11           * @date        2018/11/22
+  12           * @author      Megawin Software Center
+  13           * @copyright   Copyright (c) 2017 MegaWin Technology Co., Ltd.
+  14           *              All rights reserved.
+  15           * 
+  16           ******************************************************************************* 
+  17           * @par Disclaimer
+  18           * The Demo software is provided "AS IS" without any warranty, either
+  19           * expressed or implied, including, but not limited to, the implied warranties
+  20           * of merchantability and fitness for a particular purpose. The author will
+  21           * not be liable for any special, incidental, consequential or indirect
+  22           * damages due to loss of data or any other reason.
+  23           * These statements agree with the world wide and local dictated laws about
+  24           * authorship and violence against these laws.
+  25           *******************************************************************************
+  26           */
+  27          
+  28          #include ".\include\drv_iap.h"
+  29          #include "REG_MG82G5Exx.H"
+  30          
+  31          #define    ISP_ENABLE          0x80              // Set ISP Enable
+  32          #define    ISP_DISABLE         0x00              // Set ISP Disable
+  33          
+  34          
+  35          
+  36          /**
+  37           *******************************************************************************
+  38           * @brief set Page P control Process
+  39           * @details This function is used to set PageP Write & Read Process.
+  40           * @param[in]  Addr
+  41           * @param[in]  Data
+  42           * @param[in]   
+  43           * @return  None
+  44           * @note        
+  45           * @par         Example
+  46           * @code
+  47           * @endcode
+  48           *******************************************************************************
+  49           */
+  50          void PageP_Write(uint8_t Addr , uint8_t Data)
+  51          {
+  52   1        IFADRH = 0x00;
+  53   1        IFADRL = Addr;
+  54   1        IFD = Data;
+C51 COMPILER V9.54   DRV_IAP                                                               12/22/2025 19:23:23 PAGE 2   
+
+  55   1        IFMT = 0x04;
+  56   1        ISPCR = ISP_ENABLE;
+  57   1        SCMD = 0x46;
+  58   1        SCMD = 0xB9;
+  59   1        ISPCR = ISP_DISABLE;
+  60   1      }
+  61          
+  62          uint8_t PageP_Read(uint8_t  Addr)
+  63          {
+  64   1        uint8_t Data;
+  65   1      
+  66   1        IFADRH = 0x00;
+  67   1        IFADRL = Addr;
+  68   1        IFMT = 0x05;
+  69   1        ISPCR = ISP_ENABLE;
+  70   1        SCMD = 0x46;
+  71   1        SCMD = 0xB9;
+  72   1        ISPCR = ISP_DISABLE;
+  73   1        Data = IFD;
+  74   1        
+  75   1        return Data;
+  76   1      }
+  77          
+  78          
+  79          /**
+  80           *******************************************************************************
+  81           * @brief set IAP control Process
+  82           * @details This function is used to set IAP erase and write and read Process.
+  83           * @param[in]   AddrH
+  84           * @param[in]   AddrL
+  85           * @param[in    Write Dta
+  86           * @return  None
+  87           * @note        
+  88           * @par         Example
+  89           * @code
+  90           * @endcode
+  91           *******************************************************************************
+  92           */
+  93          
+  94          void IAP_Erase(uint8_t AddrH, uint8_t AddrL)
+  95          {
+  96   1        IFADRH = AddrH;
+  97   1        IFADRL = AddrL;
+  98   1        IFMT = 0x03;                //erase
+  99   1        ISPCR = ISP_ENABLE;
+ 100   1          SCMD = 0x46;
+ 101   1          SCMD = 0xB9;
+ 102   1          ISPCR = ISP_DISABLE;
+ 103   1      }
+ 104          
+ 105          void IAP_Program(uint8_t AddrH, uint8_t AddrL, uint8_t Dta)
+ 106          {
+ 107   1        IFADRH = AddrH;
+ 108   1        IFADRL = AddrL;
+ 109   1        IFD = Dta;
+ 110   1        IFMT = 0x02;                //program
+ 111   1        ISPCR = ISP_ENABLE;
+ 112   1          SCMD = 0x46;
+ 113   1          SCMD = 0xB9;
+ 114   1          ISPCR = ISP_DISABLE;
+ 115   1      }
+ 116          
+C51 COMPILER V9.54   DRV_IAP                                                               12/22/2025 19:23:23 PAGE 3   
+
+ 117          uint8_t IAP_Read(uint8_t AddrH, uint8_t AddrL)
+ 118          {
+ 119   1        uint8_t Dta;
+ 120   1      
+ 121   1        IFADRH = AddrH;
+ 122   1        IFADRL = AddrL;
+ 123   1        IFMT = 0x01;                //read
+ 124   1        ISPCR = ISP_ENABLE;
+ 125   1          SCMD = 0x46;
+ 126   1          SCMD = 0xB9;
+ 127   1          ISPCR = ISP_DISABLE;
+ 128   1      
+ 129   1        Dta = IFD;
+ 130   1        return Dta;
+ 131   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    118    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

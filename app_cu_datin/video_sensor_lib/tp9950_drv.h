@@ -1,0 +1,30 @@
+#ifndef _TP9950_DRV_H_
+#define _TP9950_DRV_H_
+
+
+#define TP9950_STATE_IDLE 		0X00
+#define TP9950_STATE_CLOSE 		0X01
+#define TP9950_STATE_DET 		0X02
+#define TP9950_STATE_WRITE_CFG 	0X03
+#define TP9950_STATE_WAIT_HV 	0X04
+#define TP9950_STATE_OPEN_CORE 	0X05
+
+
+enum{
+	TP2802_1080P25 =	    0x03,
+	TP2802_1080P30 =	    0x02,
+	TP2802_720P25  =	    0x05,
+	TP2802_720P30  =    	0x04,
+	TP2802_720P50  =	    0x01,
+	TP2802_720P60  =    	0x00,
+	TP2802_SD      =        0x06,
+	INVALID_FORMAT =		0x07,
+	TP2802_720P25V2=	    0x0D,
+	TP2802_720P30V2=		0x0C,
+	TP2802_PAL	   =        0x08,
+	TP2802_NTSC	   =    	0x09
+};
+
+
+
+#endif

@@ -1,0 +1,7 @@
+".\OBJ\MAIN.obj",
+".\OBJ\msg_event.obj",
+".\OBJ\kevin_function.obj",
+".\OBJ\Interrupt.obj",
+".\OBJ\drv_iap.obj" 
+TO ".\OBJ\kevin" 
+PRINT(".\LST\kevin.m51") RAMSIZE(256) 

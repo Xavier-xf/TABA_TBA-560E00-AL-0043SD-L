@@ -1,0 +1,366 @@
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\OBJ\MAIN.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\code\MAIN.C LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.
+                    -\LST\MAIN.lst) TABS(2) OBJECT(.\OBJ\MAIN.obj)
+
+line level    source
+
+   1          
+   2          #define _MAIN_C
+   3          
+   4          #include <Intrins.h>
+   5          #include <Absacc.h>
+   6          
+   7          #include <Stdio.h>  // for printf
+   8          
+   9          #include ".\include\REG_MG82F6D64.H"
+  10          #include ".\include\Type.h"
+  11          #include ".\include\API_Uart_BRGRL_MG82F6D64.H"
+  12          #include ".\include\API_Macro_MG82F6D64.H"
+  13          #include ".\include\kevin_function.h"
+  14          #include ".\include\msg_event.h"
+  15          #include ".\include\interrupt.h"
+  16          
+  17          
+  18          
+  19          
+  20          #define TIMER_1T_1ms_TH ((65536-(u16)(float)(1000*((float)(MCU_SYSCLK)/(float)(1000000)))) /256)      
+  21          #define TIMER_1T_1ms_TL ((65536-(u16)(float)(1000*((float)(MCU_SYSCLK)/(float)(1000000)))) %256)
+  22          
+  23          #define TIMER_12T_1ms_TH  ((65536-(u16)(float)(1000*((float)(MCU_SYSCLK)/(float)(12000000)))) /256)       
+  24          #define TIMER_12T_1ms_TL  ((65536-(u16)(float)(1000*((float)(MCU_SYSCLK)/(float)(12000000)))) %256)
+  25          
+  26          
+  27          
+  28          /*************************************************
+  29          定义系统时钟SysClk (MAX.50MHz)
+  30          可选: 
+  31            11059200,12000000,
+  32            22118400,24000000,
+  33            29491200,32000000,
+  34            44236800,48000000
+  35          *************************************************/
+  36          #define MCU_SYSCLK    12000000
+  37          /*************************************************/
+  38          /*************************************************
+  39          定义CPU时钟 CpuClk (MAX.36MHz)
+  40            1) CpuCLK=SysCLK
+  41            2) CpuClk=SysClk/2
+  42          *************************************************/
+  43          #define MCU_CPUCLK    (MCU_SYSCLK)
+  44          
+  45          
+  46          
+  47          /*************************************************
+  48          函数名称:     void DelayXus(u16 xUs)
+  49          功能描述:     延时程序，单位为us
+  50          调用函数:        
+  51          输入参数:     u8 Us -> *1us  (1~255)
+  52          输出参数:     
+  53          *************************************************/
+  54          void DelayXus(u8 xUs)
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 2   
+
+  55          {
+  56   1        while(xUs!=0)
+  57   1        {
+  58   2      #if (MCU_CPUCLK>=11059200)
+  59   2          _nop_();
+  60   2      #endif
+  61   2      #if (MCU_CPUCLK>=14745600)
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+              #endif
+  67   2      #if (MCU_CPUCLK>=16000000)
+                  _nop_();
+              #endif
+  70   2      
+  71   2      #if (MCU_CPUCLK>=22118400)
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+              #endif
+  79   2      #if (MCU_CPUCLK>=24000000)
+                  _nop_();
+                  _nop_();
+              #endif    
+  83   2      #if (MCU_CPUCLK>=29491200)
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+                  _nop_();
+              #endif
+  91   2      #if (MCU_CPUCLK>=32000000)
+                  _nop_();
+                  _nop_();
+              #endif
+  95   2      
+  96   2          xUs--;
+  97   2        }
+  98   1      }
+  99          
+ 100          /***********************************************************************************
+ 101          Function:     void InitClock()
+ 102          Description:  Initialize clock
+ 103          Input:   
+ 104          Output:       
+ 105          *************************************************************************************/
+ 106          void InitClock(void)
+ 107          {
+ 108   1      #if (MCU_SYSCLK==11059200)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // SysClk=11.0592MHz CpuClk=11.0592MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1);
+                
+              #else
+                // SysClk=11.0592MHz CpuClk=5.5296MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1);
+              #endif
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 3   
+
+              #endif
+ 118   1      
+ 119   1      #if (MCU_SYSCLK==12000000)
+ 120   1      #if (MCU_CPUCLK==MCU_SYSCLK)
+ 121   1        // SysClk=12MHz CpuClk=12MHz
+ 122   1        CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1);
+ 123   1        
+ 124   1      #else
+                // SysClk=12MHz CpuClk=6MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1);
+              #endif
+ 128   1      #endif
+ 129   1      
+ 130   1      #if (MCU_SYSCLK==22118400)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // SysClk=22.1184MHz CpuClk=22.1184MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx4, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4|OSCIn_IHRCO);
+              #else
+                // SysClk=22.1184MHz CpuClk=11.0592MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx4, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4|OSCIn_IHRCO);
+              #endif
+              #endif
+ 145   1      
+ 146   1      #if (MCU_SYSCLK==24000000)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // SysClk=24MHz CpuClk=24MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx4, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4|OSCIn_IHRCO);
+              #else
+                // SysClk=24MHz CpuClk=12MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx4, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4|OSCIn_IHRCO);
+              #endif
+              #endif
+ 161   1      
+ 162   1      #if (MCU_SYSCLK==29491200)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // Cpuclk high speed
+                CLK_SeCpuCLK_HighSpeed();
+                // SysClk=29.491200MHz CpuClk=29.491200MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx5.33, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X533|OSCIn_IHRCO);
+              #else
+                // SysClk=29.491200MHz CpuClk=14.7456MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx5.33, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X533|OSCIn_IHRCO);
+              #endif
+              #endif
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 4   
+
+ 179   1      
+ 180   1      #if (MCU_SYSCLK==32000000)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // Cpuclk high speed
+                CLK_SeCpuCLK_HighSpeed();
+                // SysClk=32MHz CpuClk=32MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx5.33, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X533|OSCIn_IHRCO);
+              #else
+                // SysClk=32MHz CpuClk=16MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx5.33, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X533|OSCIn_IHRCO);
+              #endif
+              #endif
+ 197   1      
+ 198   1      #if (MCU_SYSCLK==36000000)
+              #if (MCU_CPUCLK==MCU_SYSCLK)
+                // Cpuclk high speed
+                CLK_SeCpuCLK_HighSpeed();
+                // CKMIx6,x8,x12
+                CLK_SetCKM_x6x8x12(); 
+                // SysClk=36MHz CpuClk=18MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx6, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4_X6|OSCIn_IHRCO);
+              #else
+                // CKMIx6,x8,x12
+                CLK_SetCKM_x6x8x12(); 
+                // SysClk=36MHz CpuClk=18MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx6, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X4_X6|OSCIn_IHRCO);
+              #endif
+              #endif
+ 219   1      
+ 220   1      
+ 221   1      #if (MCU_SYSCLK==44236800)
+                // SysClk=44.2368MHz CpuClk=22.1184MHz
+                CLK_SetCKCON0(IHRCO_110592MHz|CPUCLK_SYSCLK_DIV_1|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx8, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X8|OSCIn_IHRCO);
+              #endif
+ 228   1      
+ 229   1      #if (MCU_SYSCLK==48000000)
+                // SysClk=48MHz CpuClk=24MHz
+                CLK_SetCKCON0(IHRCO_12MHz|CPUCLK_SYSCLK_DIV_2|SYSCLK_MCKDO_DIV_1|ENABLE_CKM|CKM_OSCIN_DIV_2);
+                DelayXus(100);
+                // IHRCO, MCK=CKMIx8, OSCin=IHRCO
+                CLK_SetCKCON2(ENABLE_IHRCO|MCK_CKMI_X8|OSCIn_IHRCO);
+              #endif
+ 236   1      
+ 237   1        // P60 output MCK/4
+ 238   1        //CLK_P60OC_MCKDiv4();
+ 239   1      }
+ 240          
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 5   
+
+ 241          
+ 242          /*************************************************
+ 243          函数名称:     void DelayXms(u16 xMs)
+ 244          功能描述:     延时程序，单位为ms
+ 245          输入参数:     u16 xMs -> *1ms  (1~65535)
+ 246          输出参数:     
+ 247          *************************************************/
+ 248          void DelayXms(u16 xMs)
+ 249          {
+ 250   1        while(xMs!=0)
+ 251   1        {
+ 252   2          CLRWDT();
+ 253   2          DelayXus(200);
+ 254   2          DelayXus(200);
+ 255   2          DelayXus(200);
+ 256   2          DelayXus(200);
+ 257   2          DelayXus(200);
+ 258   2          xMs--;
+ 259   2        }
+ 260   1      }
+ 261          
+ 262          
+ 263          void led_blink(void)
+ 264          {
+ 265   1        POWER_LED = !POWER_LED;
+ 266   1        set_timer(TIMER0,TID_1SEC,led_blink);
+ 267   1      }
+ 268          
+ 269          /***********************************************************************************
+ 270          函数名称:   void InitUart1(void)
+ 271          功能描述:   Uart1初始化(波特率115200)、RX:P34 TX:P35
+ 272          输入参数:   
+ 273          返回参数:     
+ 274          *************************************************************************************/
+ 275          void InitUart1(void)
+ 276          {
+ 277   1        UART1_SetMode8bitUARTVar();               // 8位 可变波特率
+ 278   1      
+ 279   1        UART1_EnS1BRG();                    //使能S1BRG波特率发生器
+ 280   1        UART1_SetBaudRateX1();                  //使能双倍波特率
+ 281   1        UART1_SetRxTxP12P13();                  //设置串口使用引脚：RX:P12 TX:P13
+ 282   1        UART1_EnReception();                  //使能串口接收功能
+ 283   1        UART1_SetS1BRGSelSYSCLK();                //设置S1BRG时钟源为系统时钟：1T
+ 284   1      
+ 285   1        UART1_SetS1BRGValue(S1BRG_BRGRL_9600_1X_12000000_1T); //设置S1BRG值及重载值
+ 286   1        
+ 287   1      }
+ 288          
+ 289          
+ 290          /***********************************************************************************
+ 291          函数名称:   void InitInterrupt(void)
+ 292          功能描述:   中断初始化
+ 293          输入参数:   
+ 294          返回参数:     
+ 295          *************************************************************************************/
+ 296          void InitInterrupt(void)
+ 297          {
+ 298   1        INT_EnUART1();      //  使能串口中断
+ 299   1        INT_EnAll();      //  使能全局中断
+ 300   1      } 
+ 301          
+ 302          
+C51 COMPILER V9.54   MAIN                                                                  01/17/2026 11:48:10 PAGE 6   
+
+ 303          
+ 304          /***********************************************************************************
+ 305          函数名称:   void InitSystem(void)
+ 306          功能描述:   系统初始化
+ 307          输入参数:   
+ 308          返回参数:     
+ 309          *************************************************************************************/
+ 310          void InitSystem(void)
+ 311          {
+ 312   1        WDT_Clear();    // 清看门狗
+ 313   1        InitClock();
+ 314   1        InitPort();
+ 315   1        set_timer_init();
+ 316   1      //  set_timer(TIMER0,TID_1SEC,led_blink);
+ 317   1        POWER_LED = LOW_LEVEL;
+ 318   1          InitUart1();
+ 319   1        InitInterrupt();
+ 320   1        user_data_init();
+ 321   1        WDT_SetClock_32K_DIV_64_1024ms();
+ 322   1        WDT_Enable();   // 使能看门狗
+ 323   1      }
+ 324          
+ 325          void main()
+ 326          {
+ 327   1          InitSystem();
+ 328   1      
+ 329   1        msg_run();
+ 330   1      }
+ 331          
+ 332          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    177    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

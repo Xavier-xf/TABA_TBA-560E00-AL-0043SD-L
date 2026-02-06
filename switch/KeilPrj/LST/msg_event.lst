@@ -1,0 +1,878 @@
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MSG_EVENT
+OBJECT MODULE PLACED IN .\OBJ\msg_event.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\code\msg_event.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PR
+                    -INT(.\LST\msg_event.lst) TABS(2) OBJECT(.\OBJ\msg_event.obj)
+
+line level    source
+
+   1          #include ".\include\msg_event.h"
+   2          #include ".\include\interrupt.h"
+   3          #include ".\include\kevin_function.h"
+   4          #include <stdio.h>
+   5          #include "stdlib.h"
+   6          
+   7          #define EVENT_QUEUE_MAX  64
+   8          
+   9          static Event EventQueue[EVENT_QUEUE_MAX];
+  10          static int EventQueueIndex = 0;
+  11          static int EventQueueCont = 0;
+  12          static BOOL home_monitor_sent[HOME_INDEX_TOTAL] = {false};
+  13          
+  14          
+  15          
+  16          /*************************************************************************
+  17          @Function:    从队列中获取系统事件
+  18          @Input:       (Event)    修改获取到的事件
+  19          @Output:      (char)
+  20                        return  1：获取系统事件成功
+  21                    return -1：获取系统事件失败，队列为空
+  22          @Description:
+  23          @Author:      kevin
+  24          @Date:        2021-08-24
+  25          *************************************************************************/
+  26          static char msg_event_get(Event* ev)
+  27          {
+  28   1          int index;
+  29   1          if(EventQueueCont == 0) {
+  30   2              ev->type = EVENT_TYPE_NONE;
+  31   2              ev->arg1 = 0;
+  32   2              ev->arg2 = 0;
+  33   2              return -1;
+  34   2          }
+  35   1          index = EventQueueIndex;
+  36   1          EventQueueIndex = (EventQueueIndex + 1) % EVENT_QUEUE_MAX;
+  37   1          EventQueueCont--;
+  38   1          ev->type = EventQueue[index].type;
+  39   1          ev->arg1 = EventQueue[index].arg1;
+  40   1          ev->arg2 = EventQueue[index].arg2;
+  41   1          return 1;
+  42   1      }
+  43          
+  44          
+  45          /************************************************************************
+  46          @Function:    将系统事件放入队列
+  47          @Input:       (Event)    要放入的事件
+  48          @Output:      (char)
+  49                    return  0：添加系统事件成功
+  50                    return -1：添加系统事件失败，队列溢出
+  51          @Description:
+  52          @Author:      kevin
+  53          @Date:        2021-08-24
+  54          ************************************************************************/
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 2   
+
+  55          char msg_event_post(Event* ev)
+  56          {
+  57   1          int index;
+  58   1      
+  59   1          if (EventQueueCont >= EVENT_QUEUE_MAX) {
+  60   2              return -1;
+  61   2          }
+  62   1          index = (EventQueueIndex + EventQueueCont) % EVENT_QUEUE_MAX;
+  63   1          EventQueue[index].type = ev->type;
+  64   1          EventQueue[index].arg1 = ev->arg1;
+  65   1          EventQueue[index].arg2 = ev->arg2;
+  66   1          EventQueueCont++;
+  67   1          return 0;
+  68   1      }
+  69          
+  70          // 判断房号是否被设置过（非默认值）
+  71          static uint8_t is_home_id_set(uint8_t* home_id)
+  72          {
+  73   1          // 检查是否为默认值 {0, 0xFF, 0, 0xFF}
+  74   1          if(home_id[0] == 0 && home_id[1] == 0xFF && home_id[2] == 0 && home_id[3] == 0xFF) {
+  75   2              return 0; // 默认值，未设置
+  76   2          }
+  77   1          return 1; // 已设置
+  78   1      }
+  79          /*************************************************************************
+  80          @Function:    处理接收的对讲拨号数据
+  81          @Input:       (uint8_t) data1 - 拨号数据的千位部分
+  82                        (uint8_t) data2 - 拨号数据的百位部分
+  83                        (uint8_t) data3 - 拨号数据的十位部分
+  84                        (uint8_t) data4 - 拨号数据的个位部分
+  85          @Output:      (void)
+  86          @Description: 接收外部拨号的四位数据（分拆为四个字节），根据拨码开关状态进�
+             -�格式转换，
+  87                        判断该拨号是否属于当前设备负责的家庭范围，若是则发送确认指令�
+             -�发布呼叫事件
+  88                        兼容两种模式：1.硬件编码模式（房号未设置时） 2.软件编码模式（房
+             -号已设置时）
+  89          @Author:      Van
+  90          @Date:        2025-07-28
+  91          *************************************************************************/
+  92          static void intercom_receive_dial(uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4)
+  93          {
+  94   1          Event event = {0};
+  95   1          u16 dial_number;
+  96   1          u8 i;
+  97   1          // 计算该房间的房号
+  98   1          u16 room_number ;
+  99   1        u8 calculated_base;
+ 100   1        u8 home_index ;
+ 101   1                  // 计算拨号号码
+ 102   1          dial_number = data1 * 1000 + data2 * 100 + data3 * 10 + data4;
+ 103   1              for(i = 0; i < 4; i++) {
+ 104   2              uint8_t* home_id;
+ 105   2              switch(i) {
+ 106   3                  case 0: home_id = Intercom.home1_id; break;
+ 107   3                  case 1: home_id = Intercom.home2_id; break;
+ 108   3                  case 2: home_id = Intercom.home3_id; break;
+ 109   3                  case 3: home_id = Intercom.home4_id; break;
+ 110   3              }
+ 111   2              
+ 112   2      
+ 113   2              room_number = home_id[0] * 1000 + home_id[1] * 100 + 
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 3   
+
+ 114   2                      home_id[2] * 10 + home_id[3];
+ 115   2              
+ 116   2              // 如果设置了软件房号，检查软件房号
+ 117   2              if(is_home_id_set(home_id)) {
+ 118   3                  if(dial_number == room_number) {
+ 119   4                      // 匹配成功
+ 120   4                      send_can_cmd_encode(CMD_ACK, 0x00, CMD_NULL, CMD_NULL, CMD_NULL);
+ 121   4                      event.type = EVENT_TYPE_CALL;
+ 122   4                      event.arg1 = i + 1;
+ 123   4                      msg_event_post(&event);
+ 124   4                      return;
+ 125   4                  }
+ 126   3              }
+ 127   2          // 如果未设置软件房号，检查硬件房号
+ 128   2          else {
+ 129   3                  // 硬件计算逻辑
+ 130   3                  u16 raw_input = data1 * 1000 + data2 * 100 + data3 * 10 + data4;
+ 131   3                  u16 converted_num = 0;
+ 132   3                  
+ 133   3                  if (DIP_SW8) {
+ 134   4                      converted_num = raw_input;
+ 135   4                  } else {
+ 136   4                      uint8_t floor = data1 * 10 + data2;
+ 137   4                      uint8_t room = data3 * 10 + data4;
+ 138   4                      converted_num = (floor - 1) * 10 + room;
+ 139   4                  }
+ 140   3                  
+ 141   3                  calculated_base = (converted_num - 1) / 4;
+ 142   3                  home_index = (converted_num - 1) % 4 + 1;
+ 143   3                  
+ 144   3                  if (calculated_base == base_address && home_index == (i + 1)) {
+ 145   4                      // 匹配成功
+ 146   4                      send_can_cmd_encode(CMD_ACK, 0x00, CMD_NULL, CMD_NULL, CMD_NULL);
+ 147   4                      event.type = EVENT_TYPE_CALL;
+ 148   4                      event.arg1 = i + 1;
+ 149   4                      msg_event_post(&event);
+ 150   4                      return;
+ 151   4                  }
+ 152   3              }
+ 153   2          }
+ 154   1      }
+ 155          
+ 156          static void intercom_receive_set_home_id(uint8_t home_id, uint8_t data_high, uint8_t data_low,uint8_t bran
+             -cher_id)
+ 157          {
+ 158   1          if(brancher_id==base_address){
+ 159   2              uint16_t  home_number;
+ 160   2      
+ 161   2              home_number = (uint16_t)((data_high << 8) | data_low);
+ 162   2          
+ 163   2              if(home_id == HOME_ID1) {
+ 164   3                  UserData.home1_id[0] = home_number/1000;
+ 165   3                  UserData.home1_id[1] = home_number%1000/100;
+ 166   3                  UserData.home1_id[2] = home_number%100/10;
+ 167   3                  UserData.home1_id[3] = home_number%10;
+ 168   3                  save_user_data(HOME1_ID_ADDR, UserData.home1_id);
+ 169   3              } else if(home_id == HOME_ID2) {
+ 170   3                  UserData.home2_id[0] = home_number/1000;
+ 171   3                  UserData.home2_id[1] = home_number%1000/100;
+ 172   3                  UserData.home2_id[2] = home_number%100/10;
+ 173   3                  UserData.home2_id[3] = home_number%10;
+ 174   3                  save_user_data(HOME2_ID_ADDR, UserData.home2_id);
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 4   
+
+ 175   3              } else if(home_id == HOME_ID3) {
+ 176   3                  UserData.home3_id[0] = home_number/1000;
+ 177   3                  UserData.home3_id[1] = home_number%1000/100;
+ 178   3                  UserData.home3_id[2] = home_number%100/10;
+ 179   3                  UserData.home3_id[3] = home_number%10;
+ 180   3                  save_user_data(HOME3_ID_ADDR, UserData.home3_id);
+ 181   3              } else if(home_id == HOME_ID4) {
+ 182   3                  UserData.home4_id[0] = home_number/1000;
+ 183   3                  UserData.home4_id[1] = home_number%1000/100;
+ 184   3                  UserData.home4_id[2] = home_number%100/10;
+ 185   3                  UserData.home4_id[3] = home_number%10;
+ 186   3                  save_user_data(HOME4_ID_ADDR, UserData.home4_id);
+ 187   3              }
+ 188   2              send_can_cmd_encode(CMD_ACK, 0x00, CMD_NULL, CMD_NULL, CMD_NULL);
+ 189   2          }
+ 190   1      
+ 191   1      
+ 192   1      }
+ 193          
+ 194          static void intercom_unlock_check(void)
+ 195          {
+ 196   1          if(Intercom.unlock_status == UNLOCK_START_WAIT_ACK) {
+ 197   2              Intercom.unlock_status = UNLOCK_BUSY;
+ 198   2          }
+ 199   1          if(Intercom.unlock_status == UNLOCK_END_WAIT_ACK) {
+ 200   2              Intercom.unlock_status = UNLOCK_IDLE;
+ 201   2          }
+ 202   1      }
+ 203          
+ 204          static void intercom_monitor_check(void)
+ 205          {
+ 206   1          if(Intercom.monitor_status == MONITOR_START_WAIT_ACK) {
+ 207   2              Intercom.monitor_status = MONITOR_BUSY;
+ 208   2          }
+ 209   1          if(Intercom.monitor_status == MONITOR_END_WAIT_ACK) {
+ 210   2              Intercom.monitor_status = MONITOR_IDLE;
+ 211   2          }
+ 212   1      }
+ 213          
+ 214          static void intercom_receive_ack(uint8_t data1)
+ 215          {
+ 216   1          if(data1 == 0x00) {
+ 217   2              return ;
+ 218   2          }
+ 219   1          intercom_unlock_check();
+ 220   1          intercom_monitor_check();
+ 221   1      }
+ 222          
+ 223          
+ 224          static void intercom_send_home_id(uint8_t data1,uint8_t data2)
+ 225          {
+ 226   1          if(data2==base_address){
+ 227   2              uint8_t home_id_high, home_id_low;
+ 228   2              uint8_t home_index = 0;
+ 229   2              u16 converted_num;
+ 230   2                  // 获取对应的房号数据
+ 231   2              uint8_t* home_id;
+ 232   2          
+ 233   2              // 确定home索引（1-4，对应HOME_ID1到HOME_ID4）
+ 234   2              if (data1 == HOME_ID1) {
+ 235   3                  home_index = 1;
+ 236   3              } else if (data1 == HOME_ID2) {
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 5   
+
+ 237   3                  home_index = 2;
+ 238   3              } else if (data1 == HOME_ID3) {
+ 239   3                  home_index = 3;
+ 240   3              } else if (data1 == HOME_ID4) {
+ 241   3                  home_index = 4;
+ 242   3              } else {
+ 243   3                  return; // 无效ID，不发送
+ 244   3              }
+ 245   2              
+ 246   2          
+ 247   2              switch(home_index) {
+ 248   3                  case 1: home_id = Intercom.home1_id; break;
+ 249   3                  case 2: home_id = Intercom.home2_id; break;
+ 250   3                  case 3: home_id = Intercom.home3_id; break;
+ 251   3                  case 4: home_id = Intercom.home4_id; break;
+ 252   3                  default: return;
+ 253   3              }
+ 254   2              
+ 255   2              // 如果房号被设置过，使用软件编码
+ 256   2              if(is_home_id_set(home_id)) {
+ 257   3                  u16 home_number = home_id[0] * 1000 + home_id[1] * 100 + 
+ 258   3                                    home_id[2] * 10 + home_id[3];
+ 259   3                  
+ 260   3          
+ 261   3                      // 发送原始数值
+ 262   3                      home_id_high = home_number / 100;       // 取高两位
+ 263   3                      home_id_low = home_number % 100;        // 取低两位
+ 264   3          
+ 265   3              }
+ 266   2              // 如果房号未设置，使用硬件编码
+ 267   2              else {
+ 268   3                  // 计算converted_num（与接收逻辑反向：converted_num = base_address×4 + home_index�
+             -��
+ 269   3                  converted_num = base_address * 4 + home_index;
+ 270   3                  
+ 271   3                  // 根据DIP_SW8切换发送格式
+ 272   3                  if (DIP_SW8) {
+ 273   4                      // 模式1：!DIP_SW8，发送原始数值（拆分高位和低位）
+ 274   4                      home_id_high = converted_num / 100;       // 取高两位
+ 275   4                      home_id_low = converted_num % 100;        // 取低两位
+ 276   4                  } else {
+ 277   4                      // 模式2：DIP_SW8=1，发送"楼层×10 + 户号"格式
+ 278   4                      uint8_t floor = (converted_num - 1) / 10 + 1;  // 楼层（1-25）
+ 279   4                      uint8_t room = (converted_num - 1) % 10 + 1;   // 户号（1-10）
+ 280   4                      
+ 281   4                      home_id_high = floor;  // 楼层作为高位
+ 282   4                      home_id_low = room;    // 户号作为低位
+ 283   4                  }
+ 284   3              }
+ 285   2              
+ 286   2              // 发送最终结果
+ 287   2              send_can_cmd_encode(CMD_SEND_HOME_ID, home_index, home_id_high, home_id_low, CMD_NULL);
+ 288   2          }
+ 289   1      
+ 290   1      }
+ 291          
+ 292          
+ 293          static uint8_t get_rand_data(uint8_t range)
+ 294          {
+ 295   1          uint8_t rand_data;
+ 296   1      
+ 297   1          srand(cpu_count);
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 6   
+
+ 298   1          rand_data = rand() % range + 1;
+ 299   1          return rand_data;
+ 300   1      }
+ 301          
+ 302          static uint8_t send_status_count = 0;
+ 303          static void send_monitor_status(void)
+ 304          {
+ 305   1      
+ 306   1          send_can_cmd_encode(CMD_SEND_MONITOR_STATUS, 0x01, CMD_NULL, CMD_NULL, CMD_NULL);
+ 307   1          if(send_status_count) {
+ 308   2              uint8_t rand_data;
+ 309   2              send_status_count--;
+ 310   2              rand_data = get_rand_data(50);
+ 311   2              set_timer(TIMER3, TID_10mSEC*rand_data, send_monitor_status);
+ 312   2          }
+ 313   1      }
+ 314          
+ 315          static void intercom_send_monitor_status(void)
+ 316          {
+ 317   1      
+ 318   1          if(Intercom.monitor_status == MONITOR_BUSY) {
+ 319   2              uint8_t rand_data;
+ 320   2              send_status_count = 1;
+ 321   2              rand_data = get_rand_data(50);
+ 322   2              set_timer(TIMER3, TID_10mSEC*rand_data, send_monitor_status);
+ 323   2          }
+ 324   1      }
+ 325          
+ 326          static void sys_intercome_check(void)
+ 327          {
+ 328   1          uint8_t cmd, data1, data2, data3, data4;
+ 329   1      
+ 330   1          if(receive_can_cmd_decode(&cmd, &data1, &data2, &data3, &data4) == 1) {
+ 331   2              switch(cmd) {
+ 332   3              case CMD_DIAL:
+ 333   3                  intercom_receive_dial(data1, data2, data3, data4);
+ 334   3                  break;
+ 335   3              case CMD_SET_HOME_ID:
+ 336   3                  intercom_receive_set_home_id(data1, data2, data3,data4);
+ 337   3                  break;
+ 338   3              case CMD_READ_HOME_ID:
+ 339   3                  intercom_send_home_id(data1,data2);
+ 340   3                  break;
+ 341   3              case CMD_READ_MONITOR_STATUS:
+ 342   3                  intercom_send_monitor_status();
+ 343   3                  break;
+ 344   3              case CMD_ACK:
+ 345   3                  intercom_receive_ack(data1);
+ 346   3                  break;
+ 347   3              }
+ 348   2          }
+ 349   1      }
+ 350          static LEVEL pre_status = HIGH_LEVEL;
+ 351          static uint8_t debounce_timer = 0;      // 防抖定时器ID
+ 352          static uint8_t debounce_flag = 0;       // 防抖处理标志
+ 353          static void unlock_debounce_timeout(void);
+ 354          /***********************************************************************
+ 355          @Function:    开锁事件检测（带100ms防抖）
+ 356          @Input:       (void)
+ 357          @Output:      (void)
+ 358          @Description: 检测UNLOCK_GPIO是否被拉低，低电平有开锁，高电平无开锁
+ 359                        增加100ms防抖处理，防止按键抖动误触发
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 7   
+
+ 360                        只对低电平（开锁开始）进行防抖，高电平（开锁结束）立即响应
+ 361          @Author:      kevin
+ 362          @Date:        2021-08-24
+ 363          @Modified:    2025-12-7 增加防抖功能
+ 364          ************************************************************************/
+ 365          static void sys_unlock_check(void)
+ 366          {
+ 367   1          Event event = {0};
+ 368   1          
+ 369   1          // 读取当前GPIO状态
+ 370   1          LEVEL current_gpio = (UNLOCK_GPIO == 0) ? LOW_LEVEL : HIGH_LEVEL;
+ 371   1          
+ 372   1          // 处理高电平 -> 开锁结束（立即响应，不需要防抖）
+ 373   1          if((current_gpio == HIGH_LEVEL) && (Intercom.unlock_status == UNLOCK_BUSY)) {
+ 374   2              // 取消可能存在的防抖定时器
+ 375   2              if(debounce_flag) {
+ 376   3                  kill_timer(TIMER0);
+ 377   3                  debounce_flag = 0;
+ 378   3              }
+ 379   2              
+ 380   2              pre_status = HIGH_LEVEL;
+ 381   2              event.type = EVENT_TYPE_UNLOCK_END;
+ 382   2              msg_event_post(&event);
+ 383   2              return;
+ 384   2          }
+ 385   1          
+ 386   1          // 处理低电平 -> 开锁开始（需要防抖）
+ 387   1          if((current_gpio == LOW_LEVEL) && (pre_status == HIGH_LEVEL) && 
+ 388   1             (Intercom.unlock_status == UNLOCK_IDLE)) {
+ 389   2              if(!debounce_flag) {
+ 390   3                  // 第一次检测到低电平，启动防抖定时器
+ 391   3                  debounce_flag = 1;
+ 392   3                  set_timer(TIMER0, TID_100mSEC, unlock_debounce_timeout);
+ 393   3              }
+ 394   2          } else if(current_gpio == HIGH_LEVEL) {
+ 395   2              // 当前是高电平，取消防抖
+ 396   2              if(debounce_flag) {
+ 397   3                  kill_timer(TIMER0);
+ 398   3                  debounce_flag = 0;
+ 399   3              }
+ 400   2          }
+ 401   1      }
+ 402          
+ 403          /***********************************************************************
+ 404          @Function:    开锁防抖超时处理
+ 405          @Input:       (void)
+ 406          @Output:      (void)
+ 407          @Description: 防抖定时器超时后的处理，确认开锁事件
+ 408          @Author:      kevin
+ 409          @Date:        2023-11-15
+ 410          ************************************************************************/
+ 411          static void unlock_debounce_timeout(void)
+ 412          {
+ 413   1          Event event = {0};
+ 414   1          
+ 415   1          // 防抖定时器超时，确认开锁事件
+ 416   1          if(debounce_flag) {
+ 417   2              // 检查当前GPIO状态是否仍为低电平
+ 418   2              if((UNLOCK_GPIO == 0) && (pre_status == HIGH_LEVEL) && 
+ 419   2                 (Intercom.unlock_status == UNLOCK_IDLE)) {
+ 420   3                  // 确认开锁开始
+ 421   3                  pre_status = LOW_LEVEL;
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 8   
+
+ 422   3                  event.type = EVENT_TYPE_UNLOCK_START;
+ 423   3                  msg_event_post(&event);
+ 424   3              }
+ 425   2              
+ 426   2              // 重置防抖标志
+ 427   2              debounce_flag = 0;
+ 428   2          }
+ 429   1          
+ 430   1          // 清除定时器
+ 431   1          kill_timer(TIMER0);
+ 432   1      }
+ 433          
+ 434          
+ 435          
+ 436          static void home1_monitor_check(void)
+ 437          {
+ 438   1          Event event = {0};
+ 439   1      
+ 440   1          if(!POWER_HOME1_GPIO && home_monitor_sent[HOME_INDEX_1]==false) {
+ 441   2              event.type = EVENT_TYPE_MONITOR_START;
+ 442   2              event.arg1 = HOME_ID1;
+ 443   2              msg_event_post(&event);
+ 444   2          }
+ 445   1      
+ 446   1      //    if(!POWER_HOME1_GPIO && !AUDIO_VIDEO_CH1_GPIO) {
+ 447   1      //        event.type = EVENT_TYPE_OPEN_AUDIO_VIDEO;
+ 448   1      //        event.arg1 = HOME_ID1;
+ 449   1      //        msg_event_post(&event);
+ 450   1      //    } else if(POWER_HOME1_GPIO && AUDIO_VIDEO_CH1_GPIO) {
+ 451   1      //        event.type = EVENT_TYPE_CLOSE_AUDIO_VIDEO;
+ 452   1      //        event.arg1 = HOME_ID1;
+ 453   1      //        msg_event_post(&event);
+ 454   1      //    }
+ 455   1      }
+ 456          
+ 457          static void home2_monitor_check(void)
+ 458          {
+ 459   1          Event event = {0};
+ 460   1      
+ 461   1          if(!POWER_HOME2_GPIO && home_monitor_sent[HOME_INDEX_2]==false) {
+ 462   2              event.type = EVENT_TYPE_MONITOR_START;
+ 463   2              event.arg1 = HOME_ID2;
+ 464   2              msg_event_post(&event);
+ 465   2          }
+ 466   1      
+ 467   1      //    if(!POWER_HOME2_GPIO && !AUDIO_VIDEO_CH2_GPIO) {
+ 468   1      //        event.type = EVENT_TYPE_OPEN_AUDIO_VIDEO;
+ 469   1      //        event.arg1 = HOME_ID2;
+ 470   1      //        msg_event_post(&event);
+ 471   1      //    } else if(POWER_HOME2_GPIO && AUDIO_VIDEO_CH2_GPIO) {
+ 472   1      //        event.type = EVENT_TYPE_CLOSE_AUDIO_VIDEO;
+ 473   1      //        event.arg1 = HOME_ID2;
+ 474   1      //        msg_event_post(&event);
+ 475   1      //    }
+ 476   1      }
+ 477          
+ 478          static void home3_monitor_check(void)
+ 479          {
+ 480   1          Event event = {0};
+ 481   1      
+ 482   1          if(!POWER_HOME3_GPIO && home_monitor_sent[HOME_INDEX_3]==false) {
+ 483   2              event.type = EVENT_TYPE_MONITOR_START;
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 9   
+
+ 484   2              event.arg1 = HOME_ID3;
+ 485   2              msg_event_post(&event);
+ 486   2          }
+ 487   1      
+ 488   1      //    if(!POWER_HOME3_GPIO && !AUDIO_VIDEO_CH3_GPIO) {
+ 489   1      //        event.type = EVENT_TYPE_OPEN_AUDIO_VIDEO;
+ 490   1      //        event.arg1 = HOME_ID3;
+ 491   1      //        msg_event_post(&event);
+ 492   1      //    } else if(POWER_HOME3_GPIO && AUDIO_VIDEO_CH3_GPIO) {
+ 493   1      //        event.type = EVENT_TYPE_CLOSE_AUDIO_VIDEO;
+ 494   1      //        event.arg1 = HOME_ID3;
+ 495   1      //        msg_event_post(&event);
+ 496   1      //    }
+ 497   1      }
+ 498          
+ 499          static void home4_monitor_check(void)
+ 500          {
+ 501   1          Event event = {0};
+ 502   1      
+ 503   1          if(!POWER_HOME4_GPIO && home_monitor_sent[HOME_INDEX_4]==false) {
+ 504   2              event.type = EVENT_TYPE_MONITOR_START;
+ 505   2              event.arg1 = HOME_ID4;
+ 506   2              msg_event_post(&event);
+ 507   2          }
+ 508   1      
+ 509   1      //    if(!POWER_HOME4_GPIO && !AUDIO_VIDEO_CH4_GPIO) {
+ 510   1      //        event.type = EVENT_TYPE_OPEN_AUDIO_VIDEO;
+ 511   1      //        event.arg1 = HOME_ID4;
+ 512   1      //        msg_event_post(&event);
+ 513   1      //    } else if(POWER_HOME4_GPIO && AUDIO_VIDEO_CH4_GPIO) {
+ 514   1      //        event.type = EVENT_TYPE_CLOSE_AUDIO_VIDEO;
+ 515   1      //        event.arg1 = HOME_ID4;
+ 516   1      //        msg_event_post(&event);
+ 517   1      //    }
+ 518   1      }
+ 519          
+ 520          static void home_monitor_end_check(void)
+ 521          {
+ 522   1          Event event = {0};
+ 523   1          int i;
+ 524   1          if(Intercom.monitor_status != MONITOR_BUSY)
+ 525   1              return ;
+ 526   1          if(POWER_HOME1_GPIO && POWER_HOME2_GPIO && POWER_HOME3_GPIO && POWER_HOME4_GPIO) {
+ 527   2              for(i = HOME_INDEX_1; i < HOME_INDEX_TOTAL; i++) {
+ 528   3                  home_monitor_sent[i] = false;
+ 529   3              }
+ 530   2              event.type = EVENT_TYPE_MONITOR_END;
+ 531   2              msg_event_post(&event);
+ 532   2              Intercom.monitor_status = MONITOR_END_WAIT_ACK;
+ 533   2          }
+ 534   1          POWER_HOME1_GPIO ? (home_monitor_sent[HOME_INDEX_1] = false) : 0,
+ 535   1          POWER_HOME2_GPIO ? (home_monitor_sent[HOME_INDEX_2] = false) : 0,
+ 536   1          POWER_HOME3_GPIO ? (home_monitor_sent[HOME_INDEX_3] = false) : 0,
+ 537   1          POWER_HOME4_GPIO ? (home_monitor_sent[HOME_INDEX_4] = false) : 0;
+ 538   1      }
+ 539          
+ 540          
+ 541          /***********************************************************************
+ 542          @Function:    监控事件检测
+ 543          @Input:       (void)
+ 544          @Output:      (void)
+ 545          @Description: 每个楼层分支器可以连接4个住宅home1-home4
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 10  
+
+ 546                  当有住宅监控时POWER_HOME_GPIO(home1-4)被拉低
+ 547          @Author:      kevin
+ 548          @Date:        2021-08-24
+ 549          ************************************************************************/
+ 550          static void sys_monitor_check(void)
+ 551          {
+ 552   1          home1_monitor_check();
+ 553   1          home2_monitor_check();
+ 554   1          home3_monitor_check();
+ 555   1          home4_monitor_check();
+ 556   1          home_monitor_end_check();
+ 557   1      }
+ 558          
+ 559          
+ 560          /***********************************************************************
+ 561          @Function:    楼层号事件检测
+ 562          @Input:       (void)
+ 563          @Output:      (void)
+ 564          @Description: 获取楼层分支器房号
+ 565          @Author:      kevin
+ 566          @Date:        2021-08-24
+ 567          ***********************************************************************/
+ 568          static void sys_get_hoom_id(void)
+ 569          {
+ 570   1          uint8_t i;
+ 571   1          for(i = 0; i < 4; i++) {
+ 572   2              Intercom.home1_id[i] = UserData.home1_id[i];
+ 573   2              Intercom.home2_id[i] = UserData.home2_id[i];
+ 574   2              Intercom.home3_id[i] = UserData.home3_id[i];
+ 575   2              Intercom.home4_id[i] = UserData.home4_id[i];
+ 576   2          }
+ 577   1      }
+ 578          /***********************************************************************
+ 579          @Function:    更新拨码目标值
+ 580          @Input:       (void)
+ 581          @Output:      (void)
+ 582          @Description:
+ 583          @Author:      xiang
+ 584          @Date:        2025-07-25
+ 585          ***********************************************************************/
+ 586          static void update_branch_target(void)
+ 587          {
+ 588   1          uint8_t new_base_addr = 0;
+ 589   1          //  读取最新的拨码开关状态
+ 590   1          read_dip_switch();
+ 591   1          new_base_addr = dip_switch_value;
+ 592   1      
+ 593   1          // 如果分支器地址 发生了改变
+ 594   1          if(new_base_addr != prev_base_address)
+ 595   1          {
+ 596   2              // 恢复4个房间号为默认值 {0, 0xFF, 0, 0xFF}
+ 597   2              UserData.home1_id[0] = 0;    UserData.home1_id[1] = 0xFF;    UserData.home1_id[2] = 0;    UserData
+             -.home1_id[3] = 0xFF;
+ 598   2              UserData.home2_id[0] = 0;    UserData.home2_id[1] = 0xFF;    UserData.home2_id[2] = 0;    UserData
+             -.home2_id[3] = 0xFF;
+ 599   2              UserData.home3_id[0] = 0;    UserData.home3_id[1] = 0xFF;    UserData.home3_id[2] = 0;    UserData
+             -.home3_id[3] = 0xFF;
+ 600   2              UserData.home4_id[0] = 0;    UserData.home4_id[1] = 0xFF;    UserData.home4_id[2] = 0;    UserData
+             -.home4_id[3] = 0xFF;
+ 601   2      
+ 602   2              // 将默认值持久化保存到闪存(IAP)，保证重启后依然生效
+ 603   2              save_user_data(HOME1_ID_ADDR, UserData.home1_id);
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 11  
+
+ 604   2              save_user_data(HOME2_ID_ADDR, UserData.home2_id);
+ 605   2              save_user_data(HOME3_ID_ADDR, UserData.home3_id);
+ 606   2              save_user_data(HOME4_ID_ADDR, UserData.home4_id);
+ 607   2      
+ 608   2              //  更新历史值，避免重复触发恢复逻辑
+ 609   2              prev_base_address = new_base_addr;
+ 610   2          }
+ 611   1      
+ 612   1          //  更新当前分支器地址
+ 613   1          base_address = new_base_addr;
+ 614   1      }
+ 615          
+ 616          /***********************************************************************
+ 617          @Function:    系统事件检测
+ 618          @Input:       (void)
+ 619          @Output:      (void)
+ 620          @Description:
+ 621          @Author:      kevin
+ 622          @Date:        2021-08-24
+ 623          ***********************************************************************/
+ 624          static void sys_event_check(void)
+ 625          {
+ 626   1          sys_intercome_check();
+ 627   1          sys_unlock_check();
+ 628   1          sys_monitor_check();
+ 629   1          sys_timer_check();
+ 630   1          sys_get_hoom_id();
+ 631   1          update_branch_target();   // xiang：更新拨码目标值
+ 632   1      }
+ 633          
+ 634          
+ 635          
+ 636          
+ 637          static void sys_call_process(HOME_ID id)
+ 638          {
+ 639   1          //open_audio_video_ch(id);
+ 640   1          call_home(id);
+ 641   1      }
+ 642          
+ 643          static BOOL check_home_monitor_sent_reset(HOME_ID id)
+ 644          {
+ 645   1          if(home_monitor_sent[id] == true) {
+ 646   2              return false;
+ 647   2          }
+ 648   1          return true;
+ 649   1      
+ 650   1      }
+ 651          static void intercom_wait_ack(void)
+ 652          {
+ 653   1      
+ 654   1          if (Intercom.send_count > 0) {
+ 655   2              Intercom.send_count--;
+ 656   2              if(Intercom.monitor_status == MONITOR_START_WAIT_ACK) {
+ 657   3                  send_can_cmd_encode(CMD_MONITOR_START, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 658   3              } else if(Intercom.monitor_status == MONITOR_END_WAIT_ACK) {
+ 659   3                  send_can_cmd_encode(CMD_MONITOR_END, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 660   3              }
+ 661   2              if(Intercom.unlock_status == UNLOCK_START_WAIT_ACK) {
+ 662   3                  send_can_cmd_encode(CMD_UNLOCK_START, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 663   3              } else if(Intercom.unlock_status == UNLOCK_END_WAIT_ACK) {
+ 664   3                  send_can_cmd_encode(CMD_UNLOCK_END, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 665   3              }
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 12  
+
+ 666   2              set_timer(TIMER2, TID_800mSEC, intercom_wait_ack);
+ 667   2          } else {
+ 668   2              if((Intercom.monitor_status == MONITOR_START_WAIT_ACK) || (Intercom.monitor_status == MONITOR_END_
+             -WAIT_ACK)) {
+ 669   3                  Intercom.monitor_status = MONITOR_IDLE;
+ 670   3              }
+ 671   2              if((Intercom.unlock_status == UNLOCK_START_WAIT_ACK) || (Intercom.unlock_status == UNLOCK_END_WAIT
+             -_ACK)) {
+ 672   3                  Intercom.unlock_status = UNLOCK_IDLE;
+ 673   3              }
+ 674   2          }
+ 675   1      
+ 676   1      }
+ 677          
+ 678          /***********************************************************************
+ 679          @Function:    开锁事件处理
+ 680          @Input:       (void)
+ 681          @Output:      (void)
+ 682          @Description: 发送开锁指令到CAN总线
+ 683          @Author:      kevin
+ 684          @Date:        2021-08-26
+ 685          ***********************************************************************/
+ 686          static void sys_unlock_start_process(void)
+ 687          {
+ 688   1      
+ 689   1          Intercom.unlock_status = UNLOCK_START_WAIT_ACK;
+ 690   1          Intercom.send_count = 3;
+ 691   1          send_can_cmd_encode(CMD_UNLOCK_START, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 692   1          set_timer(TIMER2, TID_800mSEC, intercom_wait_ack);
+ 693   1      }
+ 694          
+ 695          
+ 696          /***********************************************************************
+ 697          @Function:    关锁事件处理
+ 698          @Input:       (void)
+ 699          @Output:      (void)
+ 700          @Description: 发送关锁指令到CAN总线
+ 701          @Author:      kevin
+ 702          @Date:        2021-08-26
+ 703          ***********************************************************************/
+ 704          static void sys_unlock_end_process(void)
+ 705          {
+ 706   1      
+ 707   1          Intercom.unlock_status = UNLOCK_END_WAIT_ACK;
+ 708   1          Intercom.send_count = 3;
+ 709   1          send_can_cmd_encode(CMD_UNLOCK_END, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 710   1          set_timer(TIMER2, TID_800mSEC, intercom_wait_ack);
+ 711   1      }
+ 712          
+ 713          
+ 714          /***********************************************************************
+ 715          @Function:    监控事件处理
+ 716          @Input:       (HOME_ID) 房间监控事件
+ 717          @Output:      (void)
+ 718          @Description: 发送开始监控指令到CAN总线
+ 719          @Author:      kevin
+ 720          @Date:        2021-08-26
+ 721          ***********************************************************************/
+ 722          static void sys_monitor_start_process(HOME_ID id)
+ 723          {
+ 724   1          if(Intercom.monitor_status == MONITOR_IDLE||check_home_monitor_sent_reset(id)) {
+ 725   2              home_monitor_sent[id] = true;
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 13  
+
+ 726   2              Intercom.monitor_status = MONITOR_START_WAIT_ACK;
+ 727   2              Intercom.send_count = 3;
+ 728   2              send_can_cmd_encode(CMD_MONITOR_START, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 729   2              set_timer(TIMER2, TID_800mSEC, intercom_wait_ack);
+ 730   2          }
+ 731   1          //open_audio_video_ch(id);
+ 732   1      }
+ 733          
+ 734          
+ 735          /***********************************************************************
+ 736          @Function:    监控事件处理
+ 737          @Input:       (void)
+ 738          @Output:      (void)
+ 739          @Description: 发送结束监控指令到CAN总线
+ 740          @Author:      kevin
+ 741          @Date:        2021-08-26
+ 742          ***********************************************************************/
+ 743          static void sys_monitor_end_process(void)
+ 744          {
+ 745   1      
+ 746   1          Intercom.send_count = 3;
+ 747   1          //close_audio_video_ch(TOTAL_HOME_ID);
+ 748   1          send_can_cmd_encode(CMD_MONITOR_END, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+ 749   1          set_timer(TIMER2, TID_800mSEC, intercom_wait_ack);
+ 750   1      }
+ 751          
+ 752          static void sys_open_audio_video_process(HOME_ID id)
+ 753          {
+ 754   1      
+ 755   1          //open_audio_video_ch(id);
+ 756   1      }
+*** WARNING C280 IN LINE 752 OF ..\code\msg_event.c: 'id': unreferenced local variable
+ 757          
+ 758          static void sys_close_audio_video_process(HOME_ID id)
+ 759          {
+ 760   1      
+ 761   1          //close_audio_video_ch(id);
+ 762   1      }
+*** WARNING C280 IN LINE 758 OF ..\code\msg_event.c: 'id': unreferenced local variable
+ 763          
+ 764          
+ 765          
+ 766          /***************************************************************
+ 767          @Function:    系统事件处理
+ 768          @Input:       (void)
+ 769          @Output:      (void)
+ 770          @Description: 当检测到有系统事件发生时做出相对应的事件处理
+ 771          @Author:      kevin
+ 772          @Date:        2022-02-17
+ 773          ****************************************************************/
+ 774          static void msg_event_process(Event* ev)
+ 775          {
+ 776   1          switch(ev->type) {
+ 777   2          case EVENT_TYPE_TIMER:
+ 778   2              sys_timer_process(ev->arg1);
+ 779   2              break;
+ 780   2          case EVENT_TYPE_CALL:
+ 781   2              sys_call_process(ev->arg1);
+ 782   2              break;
+ 783   2          case EVENT_TYPE_UNLOCK_START:
+ 784   2              sys_unlock_start_process();
+ 785   2              break;
+C51 COMPILER V9.54   MSG_EVENT                                                             01/17/2026 11:48:10 PAGE 14  
+
+ 786   2          case EVENT_TYPE_UNLOCK_END:
+ 787   2              sys_unlock_end_process();
+ 788   2              break;
+ 789   2          case EVENT_TYPE_MONITOR_START:
+ 790   2              sys_monitor_start_process(ev->arg1);
+ 791   2              break;
+ 792   2          case EVENT_TYPE_MONITOR_END:
+ 793   2              sys_monitor_end_process();
+ 794   2              break;
+ 795   2          case EVENT_TYPE_OPEN_AUDIO_VIDEO:
+ 796   2              sys_open_audio_video_process(ev->arg1);
+ 797   2              break;
+ 798   2          case EVENT_TYPE_CLOSE_AUDIO_VIDEO:
+ 799   2              sys_close_audio_video_process(ev->arg1);
+ 800   2              break;
+ 801   2          }
+ 802   1      }
+ 803          
+ 804          
+ 805          void msg_run(void)
+ 806          {
+ 807   1          Event ev;
+ 808   1          while(1) {
+ 809   2              WDTCR |= (0x01<<4);     //清除看门狗
+ 810   2              sys_event_check();
+ 811   2              if(msg_event_get(&ev)) {
+ 812   3                  msg_event_process(&ev);
+ 813   3              }
+ 814   2          }
+ 815   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3618    ----
+   CONSTANT SIZE    =     40    ----
+   XDATA SIZE       =    333     100
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)
