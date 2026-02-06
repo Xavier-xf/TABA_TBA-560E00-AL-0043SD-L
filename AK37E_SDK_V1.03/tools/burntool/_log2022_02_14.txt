@@ -1,0 +1,23 @@
+
+
+=============Transc Information =============
+Print Time: 2022-02-14 10:52:56
+
+[10:52:56]BT_DriverName_IsCurrentFlag: The driver name is no current pid and  vid
+[10:52:56]87
+[10:52:56]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-14 10:59:02
+
+[10:59:02]BT_DriverName_IsCurrentFlag: The driver name is no current pid and  vid
+[10:59:45]BT_DriverName_IsCurrentFlag: The driver name is no current pid and  vid
+[10:59:45]87
+[10:59:45]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-14 11:01:06
+
+[11:01:06]BT_DriverName_IsCurrentFlag: The driver name is no current pid and  vid

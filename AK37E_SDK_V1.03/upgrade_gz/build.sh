@@ -1,0 +1,2 @@
+# arm-anykav500-linux-uclibcgnueabi-gcc upgrade.c -o upgrade
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/tools/arm-anykav500-linux-uclibcgnueabi/bin/arm-anykav500-linux-uclibcgnueabi-gcc upgrade.c -o upgrade -std=gnu99

@@ -1,0 +1,20 @@
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/arch/arm/cpu/arm926ejs/ak37e/ak_sysctl.o: \
+ ak_sysctl.c \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/io.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/posix_types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/stddef.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/posix_types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/tools/arm-anykav500-linux-uclibcgnueabi/lib/gcc/arm-anykav500-linux-uclibcgnueabi/4.9.4/include/stdbool.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/byteorder.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/byteorder/little_endian.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/compiler.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/compiler-gcc.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/compiler-gcc4.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/byteorder/swab.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/byteorder/generic.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/memory.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/arch-ak37e/ak_cpu.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/arch-ak37e/ak_sysctl.h

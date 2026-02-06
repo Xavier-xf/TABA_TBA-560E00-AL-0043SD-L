@@ -1,0 +1,2 @@
+ctype.o: ctype.c \
+ /home/xiaoxiao/workspace/Calluse_FF_datin/AK37E_SDK_V1.03/os/uboot/include/linux/ctype.h

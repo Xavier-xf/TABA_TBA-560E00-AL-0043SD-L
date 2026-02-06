@@ -1,0 +1,16 @@
+cmd_sd_upgrade.c:393:12:partitions_mtdparts_parse	24	static
+cmd_sd_upgrade.c:450:12:partitions_mtdparts_parse_by_envimg	1032	static
+cmd_sd_upgrade.c:421:12:partitions_mtdparts_parse_by_sdcard.isra.4	1048	static
+cmd_sd_upgrade.c:457:12:upgrade_partitions_mtdparts.isra.5	0	static
+cmd_sd_upgrade.c:467:12:upgrade_progress_bar_draw.part.0.constprop	32	static
+cmd_sd_upgrade.c:623:5:do_sd_upgrade	1024	static
+cmd_sd_upgrade.c:101:12:upgarde_file_partitions_check	288	static
+cmd_sd_upgrade.c:176:12:upgrade_file_app_partition_check	0	static
+cmd_sd_upgrade.c:172:12:upgrade_file_config_partition_check	0	static
+cmd_sd_upgrade.c:164:12:upgrade_file_rootfs_partition_check	0	static
+cmd_sd_upgrade.c:160:12:upgrade_file_logo_partition_check	0	static
+cmd_sd_upgrade.c:156:12:upgrade_file_uImage_partition_check	0	static
+cmd_sd_upgrade.c:152:12:upgrade_file_dtb_partition_check	0	static
+cmd_sd_upgrade.c:148:12:upgrade_file_envbkimg_partition_check	0	static
+cmd_sd_upgrade.c:144:12:upgrade_file_envimg_partition_check	0	static
+cmd_sd_upgrade.c:140:12:upgarde_file_uboot_partition_check	0	static

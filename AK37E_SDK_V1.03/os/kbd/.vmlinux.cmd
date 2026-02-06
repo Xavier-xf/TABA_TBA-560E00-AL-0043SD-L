@@ -1,0 +1,1 @@
+cmd_vmlinux := /bin/bash /home/xiaoxiao/workspace/taba_datin/AK37E_SDK_V1.03/os/kernel/scripts/link-vmlinux.sh /opt/arm-anykav500-linux-uclibcgnueabi/bin/arm-anykav500-linux-uclibcgnueabi-ld -EL  -p --no-undefined -X --pic-veneer --build-id

@@ -1,0 +1,112 @@
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:24:16
+
+[19:24:16]87
+[19:24:16]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:24:40
+
+[19:24:40]87
+[19:24:40]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:24:52
+
+[19:24:52]87
+[19:24:52]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:25:04
+
+[19:25:04]87
+[19:25:04]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:25:11
+
+[19:25:11]87
+[19:25:11]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:25:19
+
+[19:25:19]87
+[19:25:19]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:26:13
+
+[19:26:13]87
+[19:26:13]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:26:23
+
+[19:26:23]87
+[19:26:23]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:45:03
+
+[19:45:03]87
+[19:45:03]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:45:47
+
+[19:45:47]87
+[19:45:47]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:51:03
+
+[19:51:03]87
+[19:51:03]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:51:17
+
+[19:51:17]87
+[19:51:17]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:54:10
+
+[19:54:10]87
+[19:54:10]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:54:31
+
+[19:54:31]87
+[19:54:31]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:58:21
+
+[19:58:21]87
+[19:58:21]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-28 19:58:34
+
+[19:58:34]87
+[19:58:34]deviceDesc NULL 

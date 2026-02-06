@@ -1,0 +1,35 @@
+
+
+=============Transc Information =============
+Print Time: 2022-02-17 08:07:00
+
+[08:07:00]87
+[08:07:00]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-17 08:21:07
+
+[08:21:07]87
+[08:21:07]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-17 08:21:31
+
+[08:21:31]87
+[08:21:31]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-17 08:25:23
+
+[08:25:23]87
+[08:25:23]deviceDesc NULL 
+
+
+=============Transc Information =============
+Print Time: 2022-02-17 08:28:46
+
+[08:28:46]87
+[08:28:46]deviceDesc NULL 

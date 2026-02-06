@@ -1,0 +1,4 @@
+relocate.o: relocate.S \
+ /home/xiaoxiao/workspace/Calluse_FF_datin/AK37E_SDK_V1.03/os/uboot/include/linux/linkage.h \
+ /home/xiaoxiao/workspace/Calluse_FF_datin/AK37E_SDK_V1.03/os/uboot/include/asm/linkage.h \
+ /home/xiaoxiao/workspace/Calluse_FF_datin/AK37E_SDK_V1.03/os/uboot/include/linux/config.h

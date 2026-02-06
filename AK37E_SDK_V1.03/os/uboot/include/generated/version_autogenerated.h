@@ -1,0 +1,4 @@
+#define PLAIN_VERSION "2013.10.0-V3.1.31"
+#define U_BOOT_VERSION "U-Boot 2013.10.0-V3.1.31"
+#define CC_VERSION_STRING ""
+#define LD_VERSION_STRING ""

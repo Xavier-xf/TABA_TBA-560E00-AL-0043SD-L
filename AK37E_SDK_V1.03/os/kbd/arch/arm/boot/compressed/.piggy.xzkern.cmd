@@ -1,0 +1,1 @@
+cmd_arch/arm/boot/compressed/piggy.xzkern := (cat arch/arm/boot/compressed/../Image | sh /home/xiaoxiao/workspace/taba_datin/AK37E_SDK_V1.03/os/kernel/scripts/xz_wrap.sh && printf \\040\\232\\105\\000) > arch/arm/boot/compressed/piggy.xzkern || (rm -f arch/arm/boot/compressed/piggy.xzkern ; false)

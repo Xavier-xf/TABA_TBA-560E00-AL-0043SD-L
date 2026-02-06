@@ -1,0 +1,7 @@
+
+
+=============Transc Information =============
+Print Time: 2022-03-04 14:48:03
+
+[14:48:03]87
+[14:48:03]deviceDesc NULL 

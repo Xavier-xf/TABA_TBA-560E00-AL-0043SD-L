@@ -1,0 +1,5 @@
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/arch/arm/lib/relocate.o: \
+ relocate.S \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/linkage.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/linkage.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/config.h

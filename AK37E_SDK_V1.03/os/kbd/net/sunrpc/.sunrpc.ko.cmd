@@ -1,0 +1,1 @@
+cmd_net/sunrpc/sunrpc.ko := /opt/arm-anykav500-linux-uclibcgnueabi/bin/arm-anykav500-linux-uclibcgnueabi-ld -EL -r  -T /home/xiaoxiao/workspace/taba_datin/AK37E_SDK_V1.03/os/kernel/scripts/module-common.lds --build-id  -o net/sunrpc/sunrpc.ko net/sunrpc/sunrpc.o net/sunrpc/sunrpc.mod.o

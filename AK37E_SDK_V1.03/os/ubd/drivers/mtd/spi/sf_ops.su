@@ -1,0 +1,17 @@
+sf_ops.c:390:5:spi_flash_cmd_wait_ready	40	static
+sf_ops.c:241:5:show_spi_flash_reg	24	static
+sf_ops.c:269:5:spi_flash_quad_mode_enable	24	static
+sf_ops.c:297:5:spi_flash_quad_mode_disable	24	static
+sf_ops.c:454:5:spi_flash_write_common	40	static
+sf_ops.c:73:5:spi_flash_gd25q128c_cmd_write_status	32	static
+sf_ops.c:115:5:spi_flash_cmd_write_status	40	static
+sf_ops.c:327:12:spi_flash_cmd_bankaddr_write	32	static
+sf_ops.c:516:5:spi_flash_cmd_erase_ops	72	static
+sf_ops.c:661:5:spi_flash_cmd_write_ops	56	static
+sf_ops.c:723:5:spi_flash_read_common	32	static
+sf_ops.c:190:5:spi_flash_cmd_read_status	40	static
+sf_ops.c:761:5:spi_flash_cmd_read_ops	40	static
+sf_ops.c:830:5:spi_flash_write_extra	48	static
+sf_ops.c:898:5:spi_flash_cmd_write_ops_extra	56	static
+sf_ops.c:960:5:spi_flash_read_extra	40	static
+sf_ops.c:1010:5:spi_flash_cmd_read_ops_extra	48	static

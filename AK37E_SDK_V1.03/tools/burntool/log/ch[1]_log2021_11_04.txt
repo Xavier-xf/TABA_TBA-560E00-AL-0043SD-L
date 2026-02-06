@@ -1,0 +1,41 @@
+=============Burn Information For Channel[1]=============
+Print Time: 2021-11-4 08:20:01
+
+ss g_udisk_burnnum: 0
+[08:20:01]work number = 1
+[08:20:01]burn_mode = 1, eMedium = 1
+[08:20:02]++Start download producer++
+producer path: producer_39xx.bin, addr=80000000
+[08:20:40]burn_spiflash fail.
+[08:20:40]close file
+
+
+
+=============Burn Information For Channel[1]=============
+Print Time: 2021-11-4 08:20:46
+
+ss g_udisk_burnnum: 0
+[08:20:46]work number = 1
+[08:20:46]burn_mode = 1, eMedium = 1
+[08:20:46]++Start download producer++
+producer path: producer_39xx.bin, addr=80000000
+[08:22:00]end work number = 0
+[08:22:00]++Burn success++
+[08:22:00]close file
+
+
+
+=============Burn Information For Channel[1]=============
+Print Time: 2021-11-4 08:22:38
+
+ss g_udisk_burnnum: 0
+[08:22:38]work number = 1
+[08:22:38]burn_mode = 1, eMedium = 1
+[08:22:38]++Start download producer++
+producer path: producer_39xx.bin, addr=80000000
+[08:23:54]end work number = 0
+[08:23:54]++Burn success++
+[08:23:54]close file
+
+
+

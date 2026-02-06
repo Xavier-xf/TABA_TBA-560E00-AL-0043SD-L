@@ -1,0 +1,15 @@
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/arch/arm/lib/crt0.o: \
+ crt0.S \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_cmd_defaults.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_defaults.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/configs/anycloud_ak37e.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/configs/ak_board.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_fallbacks.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_uncmd_spl.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/asm-offsets.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include/generated/generic-asm-offsets.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/linkage.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/linkage.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/config.h

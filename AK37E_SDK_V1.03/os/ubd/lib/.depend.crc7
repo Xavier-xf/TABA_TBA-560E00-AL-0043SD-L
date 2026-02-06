@@ -1,0 +1,9 @@
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/lib/crc7.o: crc7.c \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/posix_types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/stddef.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/posix_types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/types.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/tools/arm-anykav500-linux-uclibcgnueabi/lib/gcc/arm-anykav500-linux-uclibcgnueabi/4.9.4/include/stdbool.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/linux/crc7.h

@@ -1,0 +1,10 @@
+/home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/board/anyka/anycloud_ak37e/lowlevel_init.o: \
+ lowlevel_init.S \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_cmd_defaults.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_defaults.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/configs/anycloud_ak37e.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/configs/ak_board.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/ubd/include2/asm/config.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_fallbacks.h \
+ /home/yuan/samba/hall_machine/AK37E_SDK_V1.03/os/uboot/include/config_uncmd_spl.h
