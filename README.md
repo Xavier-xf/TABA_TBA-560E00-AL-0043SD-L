@@ -127,3 +127,32 @@ cd app_cu_datin
 - 分支器烧录请务必确认 IAP 区域为 **2.0K**
 - 建议每次重要改动后使用 `./autobuild.sh -bk` 备份代码
 
+## 2026-05-21
+
+### 问题描述：
+
+录入绑定大量带标签设备信息后，继续录入新房号会导致设备卡死。实测通过预置 255 个已绑定房号后，继续输入 1257，`/app/data/data.ini` 中 `index3` 增加到 256，随后设备卡死或重启后仍无法正常恢复。
+
+### 问题原因：
+
+部分遍历已绑定房号/单元号的循环使用 `unsigned char` 作为下标，同时循环上限来自 `get_int_conf(...)` 的整型配置值。当绑定数量达到 256 时，`unsigned char` 从 255 自增后回绕为 0，导致循环无法结束。
+
+### 解决方法：
+
+将相关循环下标由 `unsigned char` 改为 `int`，避免数量达到 256 后发生回绕死循环。
+
+### 涉及文件：
+
+- `app_cu_datin/system/src/swiping_card.c`
+- `app_cu_datin/system/src/user_data.c`
+- `app_cu_datin/system/layout/layout_logo.c`
+- `app_cu_datin/system/layout/layout_home_id_set.c`
+- `app_cu_datin/system/layout/layout_base.h`
+
+### 具体修改：
+
+- 修复 `unit_number_exist()` 中遍历 `UserData.unit_number` 的下标类型。
+- 修复 `deleteAllCard()` 中打印单元号列表的下标类型。
+- 修复 `printf_user_data()` 中打印房号和单元号列表的下标类型。
+- 修复 `home_id_exist()` 中遍历 `UserData.home_id` 的下标类型。
+- 版本号由 `v2.1.0_dev` 更新为 `v2.1.1_dev`，便于升级后确认版本。

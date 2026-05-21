@@ -121,7 +121,7 @@ char *get_card_id_data(int card_number)
 void deleteAllCard(void)
 {
     /* *******************↓↓删除之前↓↓******************* */
-    for (unsigned char i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
+    for (int i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
     {
         LOG_WHITE("user unit number[%d] = %d\n\r", i, UserData.unit_number[i]);
     }

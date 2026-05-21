@@ -1303,7 +1303,7 @@ static void layout_home_id_set_quit(void)
  *********************************************************************************************************/
 static bool home_id_exist(int home_id)
 {
-	for (unsigned char i = 0; i < get_int_conf(SET_HOME_ID_INDEX); i++)
+	for (int i = 0; i < get_int_conf(SET_HOME_ID_INDEX); i++)
 	{
 		if (UserData.home_id[i] == home_id)
 		{

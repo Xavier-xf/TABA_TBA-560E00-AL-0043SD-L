@@ -51,14 +51,14 @@ void printf_user_data(void)
 	printf("home id index = %d\n\r", get_int_conf(SET_HOME_ID_INDEX));
 
 	/* 因该是遍历home id */
-	for (unsigned char i = 0; i < get_int_conf(SET_HOME_ID_INDEX); i++)
+	for (int i = 0; i < get_int_conf(SET_HOME_ID_INDEX); i++)
 	{
 		printf("user home id[%d] = %d\n\r", i, UserData.home_id[i]);
 	}
 
 	printf("unit number index = %d\n\r", get_int_conf(UNIT_NUMBER_INDEX));
 	/*  应该是遍历unit */
-	for (unsigned char i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
+	for (int i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
 	{
 		printf("user unit number[%d] = %d\n\r", i, UserData.unit_number[i]);
 	}

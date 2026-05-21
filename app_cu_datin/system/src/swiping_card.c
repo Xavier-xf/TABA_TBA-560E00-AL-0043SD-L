@@ -113,7 +113,7 @@ static void get_room_number(char *string_buf)
  *********************************************************************************************************/
 bool unit_number_exist(int unit_number)
 {
-	for (unsigned char i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
+	for (int i = 0; i < get_int_conf(UNIT_NUMBER_INDEX); i++)
 	{
 		if (UserData.unit_number[i] == unit_number)
 		{
