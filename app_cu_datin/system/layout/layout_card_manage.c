@@ -358,6 +358,10 @@ static void card_manage_dialog_box_font_change(void)
 
 static void card_manage_input_add_number(unsigned char number)
 {
+	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
+	{
+		return;
+	}
 	if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER_CONFIRM)
 	{
 		return;
@@ -381,6 +385,10 @@ static void card_manage_input_add_number(unsigned char number)
 
 static void card_manage_input_sub_number(void)
 {
+	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
+	{
+		return;
+	}
 	if (CardManageClass.dialog_box->cursor.index <= 0 || CardManageClass.cur_focus.main != UNIT_FOCUS)
 	{
 		return;
@@ -656,6 +664,7 @@ static void layout_card_manage_init(void)
 static void layout_card_manage_enter(void)
 {
 	LOG_WHITE(">>> enter layout card manage \n\r");
+	CardManageClass.room_card_info.card_number_status_count = 0;
 
 	CardManageClass.widget_show.icon();
 	CardManageClass.widget_show.font();
@@ -673,6 +682,7 @@ static void layout_card_manage_quit(void)
 	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
 	CardManageClass.cur_focus.main = UNIT_FOCUS;
 	CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_NONE; // 重置状态
+	CardManageClass.room_card_info.card_number_status_count = 0;
 
 	CardManageClass.dialog_box->cursor.index = 0;
 	memset(CardManageClass.dialog_box->font.string1, 0, 10);

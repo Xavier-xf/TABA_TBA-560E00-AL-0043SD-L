@@ -31,3 +31,9 @@
    - 保留 DATA 预置：`index3 = 255`，房号 `1001..1255`。
    - 重新构建 APP，并制作包含修复 APP + 预置 DATA 的验证升级包。
    - 输出包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`。
+
+6. [complete] 修复卡管理房号错误提示状态残留
+   - 错误提示显示期间禁止继续输入/删除房号，避免输入内容与 `Room number error` 重叠。
+   - 进入和退出卡管理界面时重置状态提示计数，避免下次进入后错误提示不再显示。
+   - 只修改 `app_cu_datin/system/layout/layout_card_manage.c`。
+   - 已完成静态 diff 检查和构建验证。

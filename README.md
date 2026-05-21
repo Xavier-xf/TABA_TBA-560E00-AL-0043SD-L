@@ -127,6 +127,34 @@ cd app_cu_datin
 - 分支器烧录请务必确认 IAP 区域为 **2.0K**
 - 建议每次重要改动后使用 `./autobuild.sh -bk` 备份代码
 
+
+## 2026-05-21（卡管理房号错误提示修复）
+
+### 问题描述：
+
+在管理房号界面中，当输入非法房号后显示 `Room number error`，继续输入新房号会与错误提示重叠；如果直接退出该界面，再次进入后输入错误房号有时不会再次弹出错误提示。
+
+### 问题原因：
+
+错误状态显示期间，数字输入和删除操作没有被拦截，导致输入内容继续刷新对话框；同时错误提示计数 `card_number_status_count` 在进入/退出界面时未重置，可能错过错误状态的显示触发点。
+
+### 解决方法：
+
+在卡管理界面处于非空闲状态时禁止继续输入或删除房号，并在进入和退出卡管理界面时清零状态计数，保证错误提示每次都能正常显示。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+
+### 具体修改：
+
+- 在 `card_manage_input_add_number()` 中增加状态判断，非空闲状态直接返回。
+- 在 `card_manage_input_sub_number()` 中增加状态判断，非空闲状态直接返回。
+- 在 `layout_card_manage_enter()` 中重置 `card_number_status_count`。
+- 在 `layout_card_manage_quit()` 中重置 `card_number_status_count`。
+
+
+
 ## 2026-05-21
 
 ### 问题描述：
@@ -156,3 +184,4 @@ cd app_cu_datin
 - 修复 `printf_user_data()` 中打印房号和单元号列表的下标类型。
 - 修复 `home_id_exist()` 中遍历 `UserData.home_id` 的下标类型。
 - 版本号由 `v2.1.0_dev` 更新为 `v2.1.1_dev`，便于升级后确认版本。
+

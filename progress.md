@@ -64,3 +64,21 @@
   - APP 内版本字符串为 `v2.1.1_dev`
 - 用户指出测试用 `/app/data` 预置文件也应恢复。
 - 已删除 `AK37E_SDK_V1.03/rootfs/rootfs/app/data/data.ini`、`user_data`、`card_data` 三个测试文件；该目录仅剩 `rings/`、`photo/` 目录。
+
+## 卡管理房号错误提示修复
+- 用户选择方案A，要求修复管理房号中 `Room number error` 与新输入房号重叠，以及退出后再次进入不再提示的问题。
+- 已打开并使用 `using-superpowers`、`systematic-debugging`、`planning-with-files-zh`、`test-driven-development`。
+- 根因：错误状态期间数字输入未被拦截；退出界面未重置 `card_number_status_count`，导致下次进入可能错过错误提示显示点。
+- 已修改 `app_cu_datin/system/layout/layout_card_manage.c`：
+  - `card_manage_input_add_number()` 在非 `CARD_MANAGE_STATUS_NONE` 时直接返回。
+  - `card_manage_input_sub_number()` 在非 `CARD_MANAGE_STATUS_NONE` 时直接返回。
+  - `layout_card_manage_enter()` 和 `layout_card_manage_quit()` 清零 `CardManageClass.room_card_info.card_number_status_count`。
+- 验证：
+  - `git diff --check -- app_cu_datin/system/layout/layout_card_manage.c task_plan.md findings.md progress.md` 通过。
+  - `git diff --ignore-space-at-eol --stat -- app_cu_datin/system/layout/layout_card_manage.c` 显示实质为 10 行新增。
+  - `app_cu_datin/autobuild.sh -all-sdk` 返回成功，APP 编译和 SDK 拷贝完成；过程中 `mkfs.jffs2` 在沙箱内仍出现已知“错误的系统调用”，但本次 APP 侧修复编译已通过。
+- 发现自动构建后的 `HALL_MACHINEOS` 只有 16,384 bytes，包头未包含 app 分区；原因是交互式 `partition_image.sh` 未选中 APP。
+- 已使用 `partition_image.sh app_resource` 重新生成 APP-only 升级包：
+  - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：585,839 bytes。
+  - 包头：`# File Partion: app.sqsh4 0 585728`。
+  - 版本：`20260521165030`。
