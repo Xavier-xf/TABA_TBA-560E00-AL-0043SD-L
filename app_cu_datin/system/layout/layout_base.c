@@ -224,6 +224,25 @@ void taba_btn_display(void)
     icon_init(&star, &star_pos, &star_res);
 
     icon_display(&star);
+
+    position taba_text_pos = {{120, 219}, {112, 44}};
+    position electronics_text_pos = {{228, 226}, {150, 30}};
+
+    if (language_get() == language_persian)
+    {
+        taba_text_pos = (position){{236, 219}, {86, 44}};
+        electronics_text_pos = (position){{146, 226}, {126, 30}};
+    }
+
+    text taba_text;
+    text_init(&taba_text, &taba_text_pos, 36);
+    taba_text.font_color = 0xFFFFC800;
+    text_display(&taba_text, font_str(STR_LOGO_TABA));
+
+    text electronics_text;
+    text_init(&electronics_text, &electronics_text_pos, 20);
+    electronics_text.font_color = 0xFFFFC800;
+    text_display(&electronics_text, font_str(STR_LOGO_ELECTRONICS));
 }
 
 KEY_LONG_PRESS_GOTO_LAYOUT key_long_press_goto_layout = NONE_LONG_PRESS; // 按键长按跳转布局标识

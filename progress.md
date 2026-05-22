@@ -82,3 +82,59 @@
   - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：585,839 bytes。
   - 包头：`# File Partion: app.sqsh4 0 585728`。
   - 版本：`20260521165030`。
+
+## 底部 TABA logo 语言切换
+- 用户确认方案A：只改底部 `taba_icon.png` 对应显示逻辑，保留纯图片，程序叠加语言文字。
+- 已启用并读取 `brainstorming`、`writing-plans`、`test-driven-development`、`systematic-debugging`、`executing-plans`、`subagent-driven-development`、`requesting-code-review`、`verification-before-completion`。
+- 已创建实施计划：`docs/superpowers/plans/2026-05-22-bottom-logo-language.md`。
+- 已创建 RED 静态回归测试：`tests/test_bottom_logo_language.sh`。
+- 已根据代码审查补强测试：校验 `app_cu_datin/system/ui/r/img/taba_icon.png` 与根目录 `logonew.png` 完全一致，覆盖“底图为新纯图片”要求。
+- 已修改：
+  - `app_cu_datin/system/layout/language.h`：增加 `STR_LOGO_TABA`、`STR_LOGO_ELECTRONICS`。
+  - `app_cu_datin/system/layout/language.c`：增加英文/波斯语 logo 文本。
+  - `app_cu_datin/system/layout/layout_base.c`：`taba_btn_display()` 先显示纯图片，再叠加大号 `TABA` 和小号 `Electronics` 文本。
+- 验证：
+  - `sh tests/test_bottom_logo_language.sh` 通过。
+  - `app_cu_datin/autobuild.sh -all-sdk` 返回成功；期间 `mkfs.jffs2` 仍有沙箱内已知“错误的系统调用”，但 APP 编译和 `app.sqsh4` 生成完成。
+  - 已用 `partition_image.sh app_resource` 生成 APP-only 升级包。
+  - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：577,647 bytes。
+  - 包头：`# File Parttion: app.sqsh4 0 577536`。
+
+## 底部 TABA logo 位置和 RTL 调整
+- 用户整机验证后反馈：文字整体偏上；波斯语 `تابا` 和 `Electronic` 间距偏大；波斯语应按从右到左排布。
+- 调整方案：英语维持左 TABA、右 Electronics；波斯语使用单独坐标，把 `تابا` 放右侧、`الکترونیک` 放左侧，并整体下移。
+- 已先更新静态测试，要求新坐标和 `language_persian` 分支。
+- 已修改 `app_cu_datin/system/layout/layout_base.c`：
+  - 英语坐标：`TABA` 使用 `{{120, 219}, {112, 44}}`，`Electronics` 使用 `{{228, 226}, {150, 30}}`。
+  - 波斯语坐标：`تابا` 使用 `{{248, 219}, {86, 44}}`，`الکترونیک` 使用 `{{128, 226}, {126, 30}}`。
+- 验证：
+  - `sh tests/test_bottom_logo_language.sh` 通过。
+  - `git diff --check -- app_cu_datin/system/layout/layout_base.c tests/test_bottom_logo_language.sh task_plan.md progress.md` 通过。
+  - `app_cu_datin/autobuild.sh -all-sdk` 返回成功；期间 `mkfs.jffs2` 仍有沙箱内已知“错误的系统调用”，但 APP 编译和 `app.sqsh4` 生成完成。
+- 已用 `partition_image.sh app_resource` 生成 APP-only 升级包。
+- `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：577,647 bytes。
+- 包头：`# File Parttion: app.sqsh4 0 577536`，版本 `20260522113838`。
+
+## 语言切换即时重绘和 calling 页面残点
+- 用户确认继续按方案A执行。
+- 已写入设计文档：`docs/superpowers/specs/2026-05-22-logo-refresh-and-calling-cleanup-design.md`。
+- 已写入实施计划：`docs/superpowers/plans/2026-05-22-logo-refresh-and-calling-cleanup.md`。
+- 已扩展静态测试，新增三类断言：
+  - 波斯语 logo 更紧凑的新坐标；
+  - 语言切换分支内存在底部区域清除和 `taba_btn_display()` 重绘；
+  - `layout_calling.c` 存在统一的 calling 文本区域清除函数。
+- 已修改：
+  - `app_cu_datin/system/layout/layout_base.c`：波斯语底部 logo 坐标改为更紧凑的排布。
+  - `app_cu_datin/system/layout/layout_system_set.c`：语言切换后立即清除底部区域并重绘 logo。
+  - `app_cu_datin/system/layout/layout_calling.c`：新增统一文本清理区域，呼叫中/呼叫警卫/无应答三条路径均先清理再绘制。
+- 验证：
+  - `sh tests/test_bottom_logo_language.sh` 通过。
+  - `git diff --check -- app_cu_datin/system/layout/layout_base.c app_cu_datin/system/layout/layout_system_set.c app_cu_datin/system/layout/layout_calling.c tests/test_bottom_logo_language.sh docs/superpowers/specs/2026-05-22-logo-refresh-and-calling-cleanup-design.md docs/superpowers/plans/2026-05-22-logo-refresh-and-calling-cleanup.md task_plan.md progress.md` 通过。
+  - `app_cu_datin/autobuild.sh -all-sdk` 返回成功；期间 `mkfs.jffs2` 仍有沙箱内已知“错误的系统调用”，但 APP 编译和 `app.sqsh4` 生成完成。
+  - 已用 `partition_image.sh app_resource` 生成 APP-only 升级包。
+  - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：577,647 bytes。
+  - 包头：`# File Parttion: app.sqsh4 0 577536`，版本 `20260522115734`。
+- 已根据代码审查补强测试：
+  - 不再依赖未跟踪的根目录 `logonew.png`，改为校验 `taba_icon.png` 的固定 SHA256。
+  - 明确校验 `system_set_logo_refresh()` 的定义和调用。
+  - 明确校验 `calling` 页英语房号路径和 `No Answer` 路径存在统一清理区域覆盖。

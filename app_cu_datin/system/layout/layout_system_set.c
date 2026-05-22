@@ -127,6 +127,13 @@ static void system_set_font_display(void)
 	system_set_reset_font_display();
 }
 
+static void system_set_logo_refresh(void)
+{
+	position pos = {{0, 193}, {480, 79}};
+	gui_erase(&pos, 0x00);
+	taba_btn_display();
+}
+
 static void system_set_focus_icon_display(void)
 {
 	// -------------------------- 左侧图标处理 --------------------------
@@ -293,6 +300,7 @@ static void system_set_key_up_up(void)
 		}
 		font_file_reload();
 		SystemSetClass.widget_show.font();
+		system_set_logo_refresh();
 	}
 	else if (SystemSetClass.cur_focus.layer == SYSTEM_SET_RESET_LAYER)
 	{
@@ -323,6 +331,7 @@ static void system_set_key_down_up(void)
 		}
 		font_file_reload();
 		SystemSetClass.widget_show.font();
+		system_set_logo_refresh();
 	}
 	else if (SystemSetClass.cur_focus.layer == SYSTEM_SET_RESET_LAYER)
 	{

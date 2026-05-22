@@ -39,6 +39,12 @@ static void reverse(char *left, char *right)
 	}
 }
 
+static void calling_text_area_clear(void)
+{
+	position pos = {{90, 82}, {340, 60}};
+	gui_erase(&pos, 0x00000000);
+}
+
 /*********************************************************************************************************
  * 函 数 名 : calling_ring_font_display
  * 功能说明 : 显示呼叫用户的文字提示信息，适配英语和波斯语布局
@@ -56,6 +62,7 @@ static void calling_ring_font_display(void)
 		text input_unit;
 		char string[20];
 
+		calling_text_area_clear();
 		sprintf(string, "%s NO.%d ...", (char *)font_str(STR_CALLING_USER), number);
 		text_init(&input_unit, &pos, 36);
 		input_unit.align = LEFT_TOP;
@@ -70,6 +77,7 @@ static void calling_ring_font_display(void)
 		position pos = {{110, 86}, {310, 50}};
 		text input_unit;
 		char string[30];
+		calling_text_area_clear();
 		text_init(&input_unit, &pos, 36);
 		sprintf(string, "%s %s", (char *)font_str(STR_CALLING_USER), arr);
 
@@ -89,6 +97,7 @@ static void calling_guard_font_display(void)
 	position pos = {{120, 86}, {310, 50}};
 	text input_unit;
 
+	calling_text_area_clear();
 	text_init(&input_unit, &pos, 36);
 	input_unit.align = LEFT_TOP;
 	text_display(&input_unit, font_str(STR_CALLING_GUARD));
@@ -106,7 +115,7 @@ static void no_answer_font_display(void)
 	position pos = {{95, 86}, {310, 50}};
 	text no_answer;
 
-	gui_erase(&pos, 0x00000000);
+	calling_text_area_clear();
 	text_init(&no_answer, &pos, 36);
 	no_answer.align = CENTER_TOP;
 	text_display(&no_answer, font_str(STR_CALLING_NO_ANSWER));

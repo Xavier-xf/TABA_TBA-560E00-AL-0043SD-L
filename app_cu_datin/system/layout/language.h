@@ -91,6 +91,10 @@ typedef enum
 	STR_SWIPING_CARD_SUCCESS,	 // Add Success ! (添加成功！)
 	STR_CARD_MANAGE_WAIT_DELETE, // Deleting... (正在删除...)
 
+	// -------------------------- 底部Logo文字 --------------------------
+	STR_LOGO_TABA,		   // TABA
+	STR_LOGO_ELECTRONICS, // Electronics
+
 	STR_TOTAL // 字符串总数（用于数组边界）
 } STRING_ID;
 

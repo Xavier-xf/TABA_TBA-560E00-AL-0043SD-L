@@ -37,3 +37,21 @@
    - 进入和退出卡管理界面时重置状态提示计数，避免下次进入后错误提示不再显示。
    - 只修改 `app_cu_datin/system/layout/layout_card_manage.c`。
    - 已完成静态 diff 检查和构建验证。
+
+7. [complete] 底部 TABA logo 文本改为跟随语言切换
+   - 用户确认方案A：保留新的纯图片 `taba_icon.png`，程序叠加绘制文本。
+   - 只修改底部 `taba_icon.png` 对应显示逻辑，不处理开机页 `TB_LG.png`。
+   - 增加多语言文本 ID，并在 `taba_btn_display()` 中绘制较大的 `TABA` 和较小的 `Electronics`。
+   - 使用静态回归测试、APP 编译和 APP-only 升级包验证。
+
+8. [complete] 调整底部 TABA logo 文本垂直居中和波斯语 RTL 排布
+   - 整体文字下移到 logo 颜色带中心区域。
+   - 英语保持左 TABA、右 Electronics。
+   - 波斯语改为右侧 `تابا`、左侧 `الکترونیک`，缩小两者间距。
+   - 重新跑静态测试、APP 编译和 APP-only 打包验证。
+
+9. [complete] 修复语言切换即时重绘和 calling 页面残点
+   - 继续收紧波斯语底部 logo 两段文字间距。
+   - 在系统设置语言切换时立即重绘底部 logo。
+   - 在 calling 页面统一清除文本区域，修复四位英语房号无应答后右侧 `.` 残留。
+   - 重新跑静态测试、APP 编译和 APP-only 打包验证。

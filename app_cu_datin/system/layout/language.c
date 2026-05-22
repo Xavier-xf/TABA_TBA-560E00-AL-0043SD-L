@@ -29,8 +29,8 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Password Error", "رمز اشتباه است"},
 		// layout settings font
 		{"System Setting", "تنظیمات سیستم"},
-		{"Unlock Password", "رمز باز کردن قفل"},
-		{"Setting Password", "تنظیم گذرواژه"},
+		{"Unlock Password", "تنظیمات رمز درب بازکن"},
+		{"Setting Password", "تنظیمات رمز ورودی"},
 		{"OutPut", "خروجی"},
 		{"NFC", "کارت دسترسی"},
 		// layout system set font
@@ -38,7 +38,7 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Language", "زبان"},
 		{"Volume setting", "تنظیمات صدا"}, // 25
 		{"English", "انگلیسی"},
-		{"Reset Factory", "بازنشانی کارخانه"},
+		{"Reset Factory", "بازگشت به کارخانه"},
 		// layout time set font
 		{"Year", "سال"},
 		{"Month", "ماه"},
@@ -70,7 +70,7 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Success", "موفق"},
 		{"UNIT:", "واحد"},
 		{"TAG:", "تگ"},
-		{"ERASE:", "محو "},
+		{"ERASE:", "پاک کردن "},
 		{"SAVE:", "ذخیره"},
 		// layout card number font
 		{"Please enter room number", "لطفا شماره اتاق را وارد کنید"},
@@ -80,6 +80,9 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Please put your card in the card section", "لطفا کارت را در قسمت کارتخوانی قرار دهید"},
 		{"Add Success !", "کارت اضافه شد"},
 		{"Deleting...", "در حال حذف"},
+		// bottom logo font
+		{"TABA", "تابا"},
+		{"Electronics", "الکترونیک"},
 };
 
 void *font_str(STRING_ID str_id)
