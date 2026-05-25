@@ -30,7 +30,7 @@ typedef enum
 /* 重大修改.功能修复.局部修复			dev/alpha/beta ->开发/内部/外部测试版 */
 /* 主版本号.次版本号.修正版本号.日期版本号_阶段版本号*/
 #define VERSION_STATE "dev"
-#define VERSION_NUMBER "v2.1.1"
+#define VERSION_NUMBER "v2.1.2"
 #define SYSTEM_VERSION VERSION_NUMBER "_" VERSION_STATE
 /*
 v2.1.8_beta1

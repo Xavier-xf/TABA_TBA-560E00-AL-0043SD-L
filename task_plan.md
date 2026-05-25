@@ -55,3 +55,13 @@
    - 在系统设置语言切换时立即重绘底部 logo。
    - 在 calling 页面统一清除文本区域，修复四位英语房号无应答后右侧 `.` 残留。
    - 重新跑静态测试、APP 编译和 APP-only 打包验证。
+
+10. [complete] 大楼机广播心跳和分支器断线 LED 闪烁
+   - 用户确认方案A：主站广播心跳，分支器只接收不回复。
+   - 新增设计文档：`docs/superpowers/specs/2026-05-25-brancher-heartbeat-led-design.md`。
+   - 新增实施计划：`docs/superpowers/plans/2026-05-25-brancher-heartbeat-led.md`。
+   - 新增静态回归测试：`tests/test_brancher_heartbeat.sh`。
+   - 大楼机每 1 秒发送 `CMD_HEARTBEAT`。
+   - 分支器 5 秒未收到心跳后 `POWER_LED` 每 500ms 闪烁，收到心跳后恢复常亮。
+   - 分支器心跳处理不发送 ACK，避免多分支器场景下形成回复风暴。
+   - 已重新跑静态测试、APP 编译和 APP-only 打包验证。

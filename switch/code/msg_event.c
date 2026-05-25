@@ -5,11 +5,58 @@
 #include "stdlib.h"
 
 #define EVENT_QUEUE_MAX  64
+#define BRANCHER_HEARTBEAT_TIMEOUT_MS 5000
+#define BRANCHER_LED_BLINK_INTERVAL_MS 500
 
 static Event EventQueue[EVENT_QUEUE_MAX];
 static int EventQueueIndex = 0;
 static int EventQueueCont = 0;
 static BOOL home_monitor_sent[HOME_INDEX_TOTAL] = {false};
+static uint32_t last_heartbeat_cpu_count = 0;
+static uint32_t last_led_blink_cpu_count = 0;
+static BOOL brancher_link_online = true;
+
+static uint32_t cpu_count_diff(uint32_t now, uint32_t before)
+{
+    if(now >= before) {
+        return now - before;
+    }
+    return (4294967295UL - before) + now + 1;
+}
+
+static void intercom_receive_heartbeat(void)
+{
+    last_heartbeat_cpu_count = cpu_count;
+    last_led_blink_cpu_count = cpu_count;
+    brancher_link_online = true;
+    POWER_LED = LOW_LEVEL;
+}
+
+static void brancher_link_status_check(void)
+{
+    uint32_t now = cpu_count;
+
+    if(last_heartbeat_cpu_count == 0) {
+        last_heartbeat_cpu_count = now;
+        last_led_blink_cpu_count = now;
+        POWER_LED = LOW_LEVEL;
+        return;
+    }
+
+    if(cpu_count_diff(now, last_heartbeat_cpu_count) < BRANCHER_HEARTBEAT_TIMEOUT_MS) {
+        if(brancher_link_online == false) {
+            brancher_link_online = true;
+            POWER_LED = LOW_LEVEL;
+        }
+        return;
+    }
+
+    brancher_link_online = false;
+    if(cpu_count_diff(now, last_led_blink_cpu_count) >= BRANCHER_LED_BLINK_INTERVAL_MS) {
+        POWER_LED = !POWER_LED;
+        last_led_blink_cpu_count = now;
+    }
+}
 
 
 
@@ -344,6 +391,9 @@ static void sys_intercome_check(void)
         case CMD_ACK:
             intercom_receive_ack(data1);
             break;
+        case CMD_HEARTBEAT:
+            intercom_receive_heartbeat();
+            break;
         }
     }
 }
@@ -627,6 +677,7 @@ static void sys_event_check(void)
     sys_unlock_check();
     sys_monitor_check();
     sys_timer_check();
+    brancher_link_status_check();
     sys_get_hoom_id();
     update_branch_target();   // xiang：更新拨码目标值
 }

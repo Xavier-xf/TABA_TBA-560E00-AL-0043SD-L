@@ -129,6 +129,41 @@ cd app_cu_datin
 
 
 
+
+## 2026-05-25（主站广播心跳与分支器断线 LED 闪烁）
+
+### 问题描述：
+
+需要在一台大楼机对应多个分支器的拓扑下，实现主站与分支器通信线路断开时，分支器当前常亮的电源 LED 自动改为闪烁；恢复通信后再回到常亮。
+
+### 问题原因：
+
+当前分支器程序只有业务命令的 ACK/重发处理，没有独立的“主站在线/离线”状态检测机制，无法覆盖总线空闲或中途拔线等场景；同时若要求每个分支器都回复心跳，在几十到上百个分支器场景下会造成总线流量随节点数线性增长。
+
+### 解决方法：
+
+采用方案A：由大楼机周期广播心跳命令，所有分支器只接收不回复。分支器本地记录最近一次收到心跳的时间，若超过阈值未收到心跳，则将 `POWER_LED` 从常亮切换为周期闪烁；收到心跳后立即恢复常亮。
+
+### 涉及文件：
+
+- `app_cu_datin/system/src/intercom.h`
+- `app_cu_datin/system/src/intercom.c`
+- `switch/code/include/kevin_function.h`
+- `switch/code/msg_event.c`
+- `tests/test_brancher_heartbeat.sh`
+
+### 具体修改：
+
+- 在大厅机和分支器协议头文件中同步新增 `CMD_HEARTBEAT = 0xBA`。
+- 在大厅机 `intercom_event_detect()` 中增加周期心跳发送逻辑，默认每 `1000ms` 广播一次心跳。
+- 在分支器接收处理 `sys_intercome_check()` 中增加 `CMD_HEARTBEAT` 分支，收到后仅刷新在线状态，不发送 ACK 或其他回复。
+- 在分支器中增加基于 `cpu_count` 的离线检测与 LED 状态机：超过 `5000ms` 未收到心跳则进入离线闪烁，`POWER_LED` 每 `500ms` 翻转一次。
+- 收到新的心跳后立即将 `POWER_LED` 恢复为常亮状态。
+- 新增静态回归脚本 `tests/test_brancher_heartbeat.sh`，用于检查两端命令号一致、分支器不回复心跳，以及离线闪烁逻辑未占用 `TIMER0`。
+
+
+
+
 ## 2026-05-22（底部 Logo 语言切换与界面残留修复）
 
 ### 问题描述：
@@ -242,3 +277,4 @@ cd app_cu_datin
 - 修复 `printf_user_data()` 中打印房号和单元号列表的下标类型。
 - 修复 `home_id_exist()` 中遍历 `UserData.home_id` 的下标类型。
 - 版本号由 `v2.1.0_dev` 更新为 `v2.1.1_dev`，便于升级后确认版本。
+

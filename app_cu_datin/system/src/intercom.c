@@ -4,6 +4,8 @@
 #include "gpio_control.h"
 #include "string.h"
 static struct ak_timeval g_monitor_2min_start_time = {0, 0};
+static struct ak_timeval g_heartbeat_send_time = {0, 0};
+static bool g_heartbeat_started = false;
 static void intercom_unlock_start_process(void)
 {
 	Intercom.send_cmd(CMD_ACK, 0x01, CMD_NULL, CMD_NULL, CMD_NULL);
@@ -184,9 +186,25 @@ static void monitor_status_check(void)
 	}
 }
 
+static void intercom_heartbeat_check(void)
+{
+	struct ak_timeval now_time;
+
+	ak_get_ostime(&now_time);
+	if (!g_heartbeat_started ||
+		ak_diff_ms_time(&now_time, &g_heartbeat_send_time) >= INTERCOM_HEARTBEAT_INTERVAL_MS)
+	{
+		Intercom.send_cmd(CMD_HEARTBEAT, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+		g_heartbeat_send_time = now_time;
+		g_heartbeat_started = true;
+	}
+}
+
 void intercom_event_detect(void)
 {
 	unsigned char cmd, data1, data2, data3, data4;
+
+	intercom_heartbeat_check();
 
 	if (Intercom.receive_cmd(&cmd, &data1, &data2, &data3, &data4))
 	{

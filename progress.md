@@ -138,3 +138,22 @@
   - 不再依赖未跟踪的根目录 `logonew.png`，改为校验 `taba_icon.png` 的固定 SHA256。
   - 明确校验 `system_set_logo_refresh()` 的定义和调用。
   - 明确校验 `calling` 页英语房号路径和 `No Answer` 路径存在统一清理区域覆盖。
+
+## 大楼机广播心跳和分支器断线 LED 闪烁
+- 用户确认方案A：主站广播心跳，分支器只接收不回复。
+- 已启用并读取 `using-superpowers`、`writing-plans`、`test-driven-development`、`verification-before-completion`、`requesting-code-review`；本轮未启动子智能体，因为当前环境要求只有用户明确要求并行代理时才可派发。
+- 已补写设计文档：`docs/superpowers/specs/2026-05-25-brancher-heartbeat-led-design.md`。
+- 已补写实施计划：`docs/superpowers/plans/2026-05-25-brancher-heartbeat-led.md`。
+- 已新增静态回归测试：`tests/test_brancher_heartbeat.sh`。
+- 已修改：
+  - `app_cu_datin/system/src/intercom.h`：新增 `CMD_HEARTBEAT 0xBA` 和 `INTERCOM_HEARTBEAT_INTERVAL_MS 1000`。
+  - `app_cu_datin/system/src/intercom.c`：新增 `intercom_heartbeat_check()`，在 `intercom_event_detect()` 中周期广播心跳。
+  - `switch/code/include/kevin_function.h`：同步新增 `CMD_HEARTBEAT 0xBA`。
+  - `switch/code/msg_event.c`：收到心跳只刷新在线时间；5 秒无心跳后用 `cpu_count` 驱动 `POWER_LED` 每 500ms 闪烁；收到心跳后恢复常亮。
+- 验证：
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `app_cu_datin/autobuild.sh -all-sdk` 返回成功；期间 `mkfs.jffs2` 仍有沙箱内已知“错误的系统调用”，但 APP 编译和 `app.sqsh4` 生成完成。
+  - 已用 `partition_image.sh app_resource` 生成 APP-only 升级包。
+  - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：577,647 bytes。
+  - 包头：`# File Parttion: app.sqsh4 0 577536`，版本 `20260525155823`。
+- 注意：该功能需要大楼机 APP 升级和分支器 MCU 固件烧录两端同时具备；当前仓库分支器侧只有 Keil 工程，未在本机完成 MCU 命令行编译。

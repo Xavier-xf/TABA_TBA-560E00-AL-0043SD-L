@@ -58,6 +58,7 @@
 #define CMD_SEND_HOME_ID    		0xB7
 #define CMD_READ_MONITOR_STATUS 	0xB8
 #define CMD_SEND_MONITOR_STATUS 	0xB9
+#define CMD_HEARTBEAT               0xBA
 
 #define CMD_END   					0xF0
 
