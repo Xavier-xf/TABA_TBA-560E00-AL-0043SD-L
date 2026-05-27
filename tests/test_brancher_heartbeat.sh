@@ -16,11 +16,12 @@ if [[ -z "$app_cmd" || -z "$switch_cmd" || "$app_cmd" != "$switch_cmd" ]]; then
 fi
 
 grep -q 'INTERCOM_HEARTBEAT_INTERVAL_MS' "$APP_HEADER"
-grep -q 'Intercom.send_cmd(CMD_HEARTBEAT' "$APP_SOURCE"
+grep -q 'send_can_cmd_encode(CMD_HEARTBEAT' "$APP_SOURCE"
 grep -q 'intercom_heartbeat_check();' "$APP_SOURCE"
 
 grep -q 'case CMD_HEARTBEAT:' "$SWITCH_SOURCE"
 grep -q 'intercom_receive_heartbeat();' "$SWITCH_SOURCE"
+grep -q 'intercom_refresh_link_online' "$SWITCH_SOURCE"
 grep -q 'BRANCHER_HEARTBEAT_TIMEOUT_MS' "$SWITCH_SOURCE"
 grep -q 'BRANCHER_LED_BLINK_INTERVAL_MS' "$SWITCH_SOURCE"
 grep -q 'brancher_link_status_check();' "$SWITCH_SOURCE"
@@ -33,6 +34,12 @@ fi
 
 if grep -q 'set_timer(TIMER0.*led' "$SWITCH_SOURCE"; then
     echo "Brancher LED blink must not use TIMER0 because unlock debounce owns it"
+    exit 1
+fi
+
+intercom_block="$(sed -n '/static void sys_intercome_check(void)/,/^}/p' "$SWITCH_SOURCE")"
+if ! grep -q 'intercom_refresh_link_online();' <<<"$intercom_block"; then
+    echo "Any valid master command must refresh brancher online state"
     exit 1
 fi
 

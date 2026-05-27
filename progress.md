@@ -157,3 +157,43 @@
   - `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`：577,647 bytes。
   - 包头：`# File Parttion: app.sqsh4 0 577536`，版本 `20260525155823`。
 - 注意：该功能需要大楼机 APP 升级和分支器 MCU 固件烧录两端同时具备；当前仓库分支器侧只有 Keil 工程，未在本机完成 MCU 命令行编译。
+
+## 心跳避让业务通信验证读房号问题
+- 用户实测：无心跳版本连续几十次 Output 读分支器 0 房号不复现，带心跳版本约第八次左右可能出现房号不显示。
+- 当前目标：先做短期验证方案，让心跳在业务通信期间暂停或延后，确认读房号问题是否消失。
+- 已启用并读取 `using-superpowers`、`systematic-debugging`、`test-driven-development`、`context-fundamentals`；上下文管理按最小高信号内容加载，未展开全部 context-engineering 技能正文。
+- 已新增实施计划：`docs/superpowers/plans/2026-05-26-intercom-heartbeat-deferral.md`。
+- 已新增静态回归测试：`tests/test_intercom_heartbeat_deferral.sh`。
+- 已修改：
+  - `app_cu_datin/system/src/intercom.h`：新增 `INTERCOM_HEARTBEAT_DEFER_MS 500`。
+  - `app_cu_datin/system/src/intercom.c`：新增业务总线活动时间戳；公共 `send_cmd` 改为 `intercom_can_send_cmd()` 包装函数；所有非心跳业务发送和有效接收刷新活动时间；心跳检查在活动窗口内延后发送。
+  - `tests/test_brancher_heartbeat.sh`：适配心跳现在直接调用底层发送函数，避免心跳本身被当成业务活动。
+- 已完成静态验证：
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+- 待完成：APP 编译、APP-only 升级包制作和包头验证。
+
+## 心跳避让业务通信正式实现
+- 用户确认将短期验证改为正式实现：业务通信期间不发心跳；业务结束后延迟恢复；分支器任意有效主站命令都刷新在线；增加 busy 状态超时保护。
+- 已补写设计文档：`docs/superpowers/specs/2026-05-26-intercom-heartbeat-busy-design.md`。
+- 已补写实施计划：`docs/superpowers/plans/2026-05-26-intercom-heartbeat-busy.md`。
+- 已按 TDD 先收紧静态测试：
+  - `tests/test_intercom_heartbeat_deferral.sh` 新增 busy 超时释放、收帧优先于心跳检查等断言。
+  - `tests/test_brancher_heartbeat.sh` 新增“任意有效主站命令刷新在线状态”断言。
+- 已完成代码修改：
+  - `app_cu_datin/system/src/intercom.h`：新增 `INTERCOM_BUS_BUSY_TIMEOUT_MS 4000`。
+  - `app_cu_datin/system/src/intercom.c`：引入 `g_intercom_bus_busy`、busy 进入/释放、超时兜底；`intercom_event_detect()` 改为先收帧再做心跳检查。
+  - `switch/code/msg_event.c`：新增 `intercom_refresh_link_online()`，成功解析任意有效主站命令后统一刷新在线状态。
+- 已完成静态验证：
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+- 代码审查补正：
+  - 初版实现被独立审查指出“仍偏向最近 500ms 活动窗口，不是真正事务 busy”。
+  - 已将 APP 侧调整为事务型 busy：业务开始进入 busy，显式结束后再走 `500ms` 恢复窗口，`4000ms` 仅作为异常卡住兜底。
+  - 已同步修正静态测试，明确禁止 defer 期间重置心跳时间戳。
+- 已完成编译与打包：
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍有已知“错误的系统调用”，但 APP 编译和 `app.sqsh4` 生成成功。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`
+  - 包头：`# File Parttion: app.sqsh4 0 581632`
+  - 包大小：`581,743 bytes`

@@ -130,6 +130,39 @@ cd app_cu_datin
 
 
 
+## 2026-05-26（心跳避让业务通信正式实现）
+
+### 问题描述：
+
+大楼机增加广播心跳后，用户实测在 Output 中连续读取分支器房号时，约第八次左右可能出现“房号不显示”；升级为无心跳版本后，连续几十次未再复现。需要将短期验证过的“业务通信期间暂停心跳”做成正式实现，同时避免分支器在长业务期误判断线闪灯。
+
+### 问题原因：
+
+当前读房号采用链式通信：大楼机发送 `CMD_READ_HOME_ID HOME_ID1`，收到 `CMD_SEND_HOME_ID` 后再继续读取 HOME_ID2/3/4。周期心跳若在业务帧之间插入，会放大链路时序竞争，导致后续房号刷新链条中断；同时分支器在线状态原先只依赖 `CMD_HEARTBEAT`，若业务期暂停心跳，则可能把主站误判为离线。
+
+### 解决方法：
+
+在大楼机侧引入正式的事务型 `bus busy` 机制：业务开始时进入 busy，事务显式结束后继续等待 `500ms` 再恢复心跳，若业务状态异常卡住超过 `4000ms` 才强制释放。分支器侧则把“主站在线刷新”从心跳专用扩展到任意成功解析的有效主站命令。
+
+### 涉及文件：
+
+- `app_cu_datin/system/src/intercom.h`
+- `app_cu_datin/system/src/intercom.c`
+- `switch/code/msg_event.c`
+- `tests/test_intercom_heartbeat_deferral.sh`
+- `tests/test_brancher_heartbeat.sh`
+
+### 具体修改：
+
+- 在大楼机协议头中新增 `INTERCOM_BUS_BUSY_TIMEOUT_MS 4000`，与已有 `INTERCOM_HEARTBEAT_DEFER_MS 500` 配合使用。
+- 在 `intercom.c` 中增加事务型业务状态：呼叫、设房号、读房号、读监控状态等业务开始时进入 busy，收到完成回包或状态结束后进入 `500ms` 恢复窗口。
+- 将 `intercom_event_detect()` 的顺序调整为“先处理接收到的业务帧，再做心跳检查”，减少已到达业务帧前插入心跳的概率。
+- 心跳仍然通过底层 `send_can_cmd_encode()` 直接发送，且 defer 期间不再重置心跳时间戳，保证业务结束后约 `500ms` 即可恢复。
+- 在分支器 `msg_event.c` 中新增 `intercom_refresh_link_online()`，只要成功解析任意有效主站命令就刷新在线时间；`CMD_HEARTBEAT` 仍保持只接收不回复。
+- 收紧静态回归脚本，新增 busy 超时释放、收帧优先于心跳检查、任意有效主站命令刷新在线状态等断言。
+
+
+
 ## 2026-05-25（主站广播心跳与分支器断线 LED 闪烁）
 
 ### 问题描述：
@@ -160,7 +193,6 @@ cd app_cu_datin
 - 在分支器中增加基于 `cpu_count` 的离线检测与 LED 状态机：超过 `5000ms` 未收到心跳则进入离线闪烁，`POWER_LED` 每 `500ms` 翻转一次。
 - 收到新的心跳后立即将 `POWER_LED` 恢复为常亮状态。
 - 新增静态回归脚本 `tests/test_brancher_heartbeat.sh`，用于检查两端命令号一致、分支器不回复心跳，以及离线闪烁逻辑未占用 `TIMER0`。
-
 
 
 
@@ -277,4 +309,3 @@ cd app_cu_datin
 - 修复 `printf_user_data()` 中打印房号和单元号列表的下标类型。
 - 修复 `home_id_exist()` 中遍历 `UserData.home_id` 的下标类型。
 - 版本号由 `v2.1.0_dev` 更新为 `v2.1.1_dev`，便于升级后确认版本。
-

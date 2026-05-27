@@ -24,12 +24,17 @@ static uint32_t cpu_count_diff(uint32_t now, uint32_t before)
     return (4294967295UL - before) + now + 1;
 }
 
-static void intercom_receive_heartbeat(void)
+static void intercom_refresh_link_online(void)
 {
     last_heartbeat_cpu_count = cpu_count;
     last_led_blink_cpu_count = cpu_count;
     brancher_link_online = true;
     POWER_LED = LOW_LEVEL;
+}
+
+static void intercom_receive_heartbeat(void)
+{
+    intercom_refresh_link_online();
 }
 
 static void brancher_link_status_check(void)
@@ -375,6 +380,7 @@ static void sys_intercome_check(void)
     uint8_t cmd, data1, data2, data3, data4;
 
     if(receive_can_cmd_decode(&cmd, &data1, &data2, &data3, &data4) == 1) {
+        intercom_refresh_link_online();
         switch(cmd) {
         case CMD_DIAL:
             intercom_receive_dial(data1, data2, data3, data4);

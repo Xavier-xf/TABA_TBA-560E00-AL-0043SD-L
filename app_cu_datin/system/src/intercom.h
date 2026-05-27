@@ -24,6 +24,8 @@
 #define CMD_LENGTH_BASE 0x03
 #define CMD_NULL 0xFF
 #define INTERCOM_HEARTBEAT_INTERVAL_MS 1000
+#define INTERCOM_HEARTBEAT_DEFER_MS 500
+#define INTERCOM_BUS_BUSY_TIMEOUT_MS 4000
 
 /************************************************************/
 

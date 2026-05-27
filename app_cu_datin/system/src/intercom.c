@@ -3,9 +3,55 @@
 #include "layout_base.h"
 #include "gpio_control.h"
 #include "string.h"
+typedef enum
+{
+	INTERCOM_BUSINESS_NONE = 0,
+	INTERCOM_BUSINESS_CALL,
+	INTERCOM_BUSINESS_SET_HOME_ID,
+	INTERCOM_BUSINESS_READ_HOME_ID,
+	INTERCOM_BUSINESS_READ_MONITOR_STATUS,
+	INTERCOM_BUSINESS_LOCAL_RESPONSE
+} INTERCOM_BUSINESS_TYPE;
+
 static struct ak_timeval g_monitor_2min_start_time = {0, 0};
 static struct ak_timeval g_heartbeat_send_time = {0, 0};
+static struct ak_timeval g_intercom_bus_active_time = {0, 0};
+static struct ak_timeval g_intercom_bus_busy_start_time = {0, 0};
+static struct ak_timeval g_intercom_bus_release_time = {0, 0};
 static bool g_heartbeat_started = false;
+static bool g_intercom_bus_active_started = false;
+static bool g_intercom_bus_busy_started = false;
+static bool g_intercom_bus_release_started = false;
+static bool g_intercom_bus_busy = false;
+static INTERCOM_BUSINESS_TYPE g_intercom_business_type = INTERCOM_BUSINESS_NONE;
+static void send_can_cmd_encode(unsigned char cmd, unsigned char data1, unsigned char data2, unsigned char data3, unsigned char data4);
+static void intercom_business_begin(INTERCOM_BUSINESS_TYPE type)
+{
+	ak_get_ostime(&g_intercom_bus_busy_start_time);
+	g_intercom_bus_busy_started = true;
+	g_intercom_bus_release_started = false;
+	g_intercom_bus_busy = true;
+	g_intercom_business_type = type;
+}
+
+static void intercom_business_finish_delay(void)
+{
+	if (!g_intercom_bus_busy)
+	{
+		return;
+	}
+	ak_get_ostime(&g_intercom_bus_release_time);
+	g_intercom_bus_release_started = true;
+}
+
+static void intercom_bus_busy_release(void)
+{
+	g_intercom_bus_busy = false;
+	g_intercom_bus_busy_started = false;
+	g_intercom_bus_release_started = false;
+	g_intercom_business_type = INTERCOM_BUSINESS_NONE;
+}
+
 static void intercom_unlock_start_process(void)
 {
 	Intercom.send_cmd(CMD_ACK, 0x01, CMD_NULL, CMD_NULL, CMD_NULL);
@@ -58,6 +104,7 @@ static void intercom_ack_process(unsigned char data1)
 	if (Intercom.status == INT_SET_HOME_ID)
 	{
 		HomeIdSetClass.set_status = HOME_ID_SET_STATUS_SUCCESS;
+		intercom_business_finish_delay();
 	}
 }
 
@@ -102,6 +149,7 @@ static void intercom_read_home_id_process(unsigned char data1, unsigned char dat
 	{
 		LOG_WHITE("the number read:[%d]\n\r", home_number);
 		HomeIdSetClass.read_id_show = READ_HOME_ID_SHOW;
+		intercom_business_finish_delay();
 	}
 	else
 	{
@@ -134,6 +182,7 @@ static void intercom_read_home_id_process(unsigned char data1, unsigned char dat
 			HomeIdSetClass.set_id[HOME_ID_SET_M4_DIALOG_BOX] = home_number;
 			save_number(home_number);
 			HomeIdSetClass.read_id_show = READ_HOME_ID_SHOW;
+			intercom_business_finish_delay();
 			break;
 		}
 	}
@@ -147,6 +196,7 @@ static void intercom_read_monitor_status_process(unsigned char data1)
 		Intercom.status = INT_TALK;
 		LOG_WHITE("有楼层分支器监控\n");
 	}
+	intercom_business_finish_delay();
 }
 
 static void monitor_status_check(void)
@@ -163,6 +213,7 @@ static void monitor_status_check(void)
 			camera_led_gpio_control(false);
 			camera_power_gpio_control(false);
 			mic_mute_gpio_control(false);
+			intercom_business_finish_delay();
 		}
 	}
 	else
@@ -186,42 +237,132 @@ static void monitor_status_check(void)
 	}
 }
 
+static void intercom_mark_bus_activity(void)
+{
+	ak_get_ostime(&g_intercom_bus_active_time);
+	g_intercom_bus_active_started = true;
+}
+
+static bool intercom_bus_busy_timed_out(struct ak_timeval *now_time)
+{
+	return g_intercom_bus_busy &&
+		   g_intercom_bus_busy_started &&
+		   ak_diff_ms_time(now_time, &g_intercom_bus_busy_start_time) >= INTERCOM_BUS_BUSY_TIMEOUT_MS;
+}
+
+static bool intercom_heartbeat_deferred(struct ak_timeval *now_time)
+{
+	if (!g_intercom_bus_busy)
+	{
+		return false;
+	}
+	if (!g_intercom_bus_release_started)
+	{
+		return true;
+	}
+	return ak_diff_ms_time(now_time, &g_intercom_bus_release_time) < INTERCOM_HEARTBEAT_DEFER_MS;
+}
+
+static void intercom_business_send_start(unsigned char cmd)
+{
+	switch (cmd)
+	{
+	case CMD_DIAL:
+		intercom_business_begin(INTERCOM_BUSINESS_CALL);
+		break;
+	case CMD_SET_HOME_ID:
+		intercom_business_begin(INTERCOM_BUSINESS_SET_HOME_ID);
+		break;
+	case CMD_READ_HOME_ID:
+		if (g_intercom_business_type != INTERCOM_BUSINESS_READ_HOME_ID)
+		{
+			intercom_business_begin(INTERCOM_BUSINESS_READ_HOME_ID);
+		}
+		break;
+	case CMD_READ_MONITOR_STATUS:
+		intercom_business_begin(INTERCOM_BUSINESS_READ_MONITOR_STATUS);
+		break;
+	}
+}
+
+static void intercom_business_state_check(void)
+{
+	if (!g_intercom_bus_busy)
+	{
+		return;
+	}
+
+	if (g_intercom_business_type == INTERCOM_BUSINESS_CALL &&
+		Intercom.status != INT_WAIT_ACK)
+	{
+		intercom_business_finish_delay();
+	}
+}
+
 static void intercom_heartbeat_check(void)
 {
 	struct ak_timeval now_time;
 
 	ak_get_ostime(&now_time);
+	intercom_business_state_check();
+	if (intercom_bus_busy_timed_out(&now_time))
+	{
+		intercom_bus_busy_release();
+	}
+	if (intercom_heartbeat_deferred(&now_time))
+	{
+		return;
+	}
+	if (g_intercom_bus_busy)
+	{
+		intercom_bus_busy_release();
+	}
 	if (!g_heartbeat_started ||
 		ak_diff_ms_time(&now_time, &g_heartbeat_send_time) >= INTERCOM_HEARTBEAT_INTERVAL_MS)
 	{
-		Intercom.send_cmd(CMD_HEARTBEAT, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
+		send_can_cmd_encode(CMD_HEARTBEAT, CMD_NULL, CMD_NULL, CMD_NULL, CMD_NULL);
 		g_heartbeat_send_time = now_time;
 		g_heartbeat_started = true;
 	}
+}
+
+static void intercom_can_send_cmd(unsigned char cmd, unsigned char data1, unsigned char data2, unsigned char data3, unsigned char data4)
+{
+	if (cmd != CMD_HEARTBEAT)
+	{
+		intercom_mark_bus_activity();
+		intercom_business_send_start(cmd);
+	}
+	send_can_cmd_encode(cmd, data1, data2, data3, data4);
 }
 
 void intercom_event_detect(void)
 {
 	unsigned char cmd, data1, data2, data3, data4;
 
-	intercom_heartbeat_check();
-
 	if (Intercom.receive_cmd(&cmd, &data1, &data2, &data3, &data4))
 	{
+		intercom_mark_bus_activity();
 		// LOG_WHITE("cmd = %#x  %#x, %#x, %#x, %#x \n", cmd, data1, data2, data3, data4);
 		switch (cmd)
 		{
 		case CMD_UNLOCK_START:
 			LOG_BLUE(">>> unlock start\n\r");
+			intercom_business_begin(INTERCOM_BUSINESS_LOCAL_RESPONSE);
 			intercom_unlock_start_process();
+			intercom_business_finish_delay();
 			break;
 		case CMD_UNLOCK_END:
 			LOG_BLUE(">>> unlock end\n\r");
+			intercom_business_begin(INTERCOM_BUSINESS_LOCAL_RESPONSE);
 			intercom_unlock_end_process();
+			intercom_business_finish_delay();
 			break;
 		case CMD_MONITOR_START:
 			LOG_BLUE(">>> monitor start\n\r");
+			intercom_business_begin(INTERCOM_BUSINESS_LOCAL_RESPONSE);
 			intercom_monitor_start_process();
+			intercom_business_finish_delay();
 			break;
 		case CMD_MONITOR_END:
 			LOG_BLUE(">>> monitor end\n\r");
@@ -242,6 +383,7 @@ void intercom_event_detect(void)
 		}
 	}
 
+	intercom_heartbeat_check();
 	monitor_status_check();
 }
 
@@ -506,7 +648,7 @@ static void intercom_read_home_id(void)
 
 STR_IntercomClass Intercom = {
 	INT_IDLE,				// status
-	send_can_cmd_encode,	// send_cmd
+	intercom_can_send_cmd, // send_cmd
 	receive_can_cmd_decode, // receive_cmd
 	intercom_call_home_id,	// call
 	intercom_set_home_id,	// set_id
