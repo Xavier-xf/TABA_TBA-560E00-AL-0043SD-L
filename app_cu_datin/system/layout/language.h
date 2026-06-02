@@ -84,6 +84,8 @@ typedef enum
 	// -------------------------- 卡片编号输入界面文字 --------------------------
 	STR_CARD_NUMBER_INPUT_UNIT_NUMBER, // Please enter room number (请输入房间号)
 	STR_CARD_NUMBER_SUCCESS,		   // Success (成功)
+	STR_CARD_NUMBER_ADD_SUCCESS,	   // Add card success (添卡成功)
+	STR_CARD_NUMBER_DELETE_SUCCESS,	   // Delete card success (删卡成功)
 	STR_CARD_NUMBER_UNIT_NUMBER_ERROR, // Room number error (房间号错误/不存在)
 
 	// -------------------------- 刷卡操作界面文字 --------------------------

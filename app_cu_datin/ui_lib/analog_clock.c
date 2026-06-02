@@ -259,6 +259,10 @@ static void analog_clock_dst_init(const position* pos)
 		analog_clock_dst_buffer = NULL;
 	}
 	analog_clock_dst_buffer = (unsigned char*)ak_mem_alloc(MODULE_ID_APP, analog_clock_pos.vector.width*analog_clock_pos.vector.height*4);
+	if(analog_clock_dst_buffer != NULL)
+	{
+		memset(analog_clock_dst_buffer, 0, analog_clock_pos.vector.width*analog_clock_pos.vector.height*4);
+	}
 }
 
 bool analog_clock_init(const analog_clock* clock_info)
@@ -437,6 +441,12 @@ bool analog_clock_deinit(void)
 	}
 
 	if(clock_dot_buffer !=NULL)
+	{
+		ak_mem_free(clock_dot_buffer);
+		clock_dot_buffer = NULL;
+	}
+
+	if(analog_clock_dst_buffer != NULL)
 	{
 		ak_mem_free(analog_clock_dst_buffer);
 		analog_clock_dst_buffer = NULL;

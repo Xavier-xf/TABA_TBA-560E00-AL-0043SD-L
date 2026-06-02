@@ -5,12 +5,23 @@
 #include "string.h"
 #include "ak_thread.h"
 
+#define CARD_MANAGE_PROMPT_TIMEOUT_TICKS 67
+#define CARD_PROMPT_ERROR_COLOR 0xFFFF0000
+#define CARD_PROMPT_SUCCESS_COLOR 0xFFFFFFFF
+
+static ak_pthread_t thread_delete_card;
+static ak_pthread_t thread_save_card;
+
+static void *delete_current_card(void *arg);
+static void room_card_numbe_display(void);
+static void room_card_string_buf_display(void);
+
 // ========== 焦点-坐标映射表 ==========
 const FocusPosMap card_manage_error_pos_map[] = {
-	{UNIT_FOCUS, 120, 28},
-	{TAG_FOCUS, 120, 71},
-	{ERASE_FOCUS, 130, 114},
-	{SAVE_FOCUS, 120, 157}};
+	{UNIT_FOCUS, 160, 28},
+	{TAG_FOCUS, 160, 71},
+	{ERASE_FOCUS, 160, 114},
+	{SAVE_FOCUS, 160, 157}};
 
 const int card_manage_error_pos_map_count =
 	sizeof(card_manage_error_pos_map) / sizeof(card_manage_error_pos_map[0]);
@@ -53,13 +64,6 @@ static void display_yes_text(int x, int y, int width, int height, int font_size)
 	const char *yes_str = font_str(STR_CARD_NUMBER_SUCCESS);
 	text_display(&yes, yes_str);
 }
-// ========== 文本/区域擦除逻辑==========
-static void clear_text(int x, int y, int width, int height, int erase_color)
-{
-	position pos = {{x, y}, {width, height}};
-	gui_erase(&pos, erase_color); // 统一擦除逻辑，便于后续修改颜色/宽高
-}
-
 // ==========错误文本显示函数） ==========
 void room_unit_number_error_font_display(void)
 {
@@ -90,25 +94,111 @@ void room_unit_number_yes_font_display(void)
 	}
 }
 
-// ========== 删除成功文本清除函数 ==========
-static void delete_all_card_success_font_clear(void)
+static void card_manage_prompt_display(STRING_ID str_id, unsigned int prompt_color)
 {
-	// 固定配置：和错误显示保持一致的宽高，擦除颜色0x00
-	const int width = 200;
-	const int height = 40;
-	const int erase_color = 0x00;
-	int target_x = -1, target_y = -1;
+	position box_pos = {{152, 73}, {236, 66}};
+	position text_pos = {{152, 73}, {236, 66}};
+	resource res = resource_get(ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG);
+	icon prompt_bg;
+	text prompt;
 
-	// 查找当前焦点对应的坐标
-	if (get_focus_pos(CardManageClass.cur_focus.main, &target_x, &target_y))
+	icon_init(&prompt_bg, &box_pos, &res);
+	icon_display(&prompt_bg);
+
+	text_init(&prompt, &text_pos, 20);
+	prompt.align = CENTER_MIDDLE;
+	prompt.font_color = prompt_color;
+	text_display(&prompt, font_str(str_id));
+}
+
+static void card_manage_result_text_clear(void)
+{
+	position tag_pos = {{160, 71}, {280, 40}};
+	position save_pos = {{160, 157}, {160, 40}};
+
+	gui_erase(&tag_pos, 0x00000000);
+	gui_erase(&save_pos, 0x00000000);
+}
+
+static void card_manage_success_result_clear(void)
+{
+	CardManageClass.room_card_info.room_card_num = 0;
+	memset(SwipingCard.string_buf[10], 0, sizeof(SwipingCard.string_buf[10]));
+	SwipingCard.success_show = false;
+	card_manage_result_text_clear();
+}
+
+static void card_manage_page_redraw(void)
+{
+	position page_pos = {{0, 0}, {480, 193}};
+
+	gui_erase(&page_pos, 0x00000000);
+	CardManageClass.widget_show.icon();
+	CardManageClass.widget_show.font();
+	CardManageClass.widget_show.focus();
+	CardManageClass.widget_show.dialog_box();
+}
+
+static void card_manage_prompt_close(void)
+{
+	if (CardManageClass.cur_focus.status == CARD_MANAGE_STATUS_NONE)
 	{
-		// 找到坐标则执行擦除
-		clear_text(target_x, target_y, width, height, erase_color);
+		return;
+	}
+
+	CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_NONE;
+	CardManageClass.room_card_info.card_number_status_count = 0;
+	card_manage_page_redraw();
+
+	if (SwipingCard.mode == CARD_ADD_CARD_MODE)
+	{
+		room_card_numbe_display();
+		room_card_string_buf_display();
+	}
+	else
+	{
+		card_manage_success_result_clear();
 	}
 }
+
+static bool card_manage_prompt_consume_key(void)
+{
+	if (CardManageClass.cur_focus.status == CARD_MANAGE_STATUS_NONE)
+	{
+		return false;
+	}
+
+	card_manage_prompt_close();
+	return true;
+}
+
+static void card_manage_prompt_show(CARD_MANAGE_STATUS status)
+{
+	CardManageClass.cur_focus.status = status;
+	CardManageClass.room_card_info.card_number_status_count = 0;
+
+	switch (status)
+	{
+	case CARD_MANAGE_STATUS_ERROR:
+		card_manage_prompt_display(STR_CARD_NUMBER_UNIT_NUMBER_ERROR, CARD_PROMPT_ERROR_COLOR);
+		break;
+	case CARD_MANAGE_STATUS_DELETE_CARD:
+		card_manage_prompt_display(STR_CARD_NUMBER_DELETE_SUCCESS, CARD_PROMPT_SUCCESS_COLOR);
+		break;
+	case CARD_MANAGE_STATUS_SAVE_CARD:
+		card_manage_prompt_display(STR_CARD_NUMBER_ADD_SUCCESS, CARD_PROMPT_SUCCESS_COLOR);
+		break;
+	case CARD_MANAGE_STATUS_SUCCESS:
+		card_manage_prompt_display(STR_CARD_NUMBER_SUCCESS, CARD_PROMPT_SUCCESS_COLOR);
+		break;
+	default:
+		break;
+	}
+}
+
 static void room_card_numbe_display(void)
 {
-	position pos = {{120, 157}, {200, 40}};
+	position pos = {{160, 157}, {160, 40}};
 	text system_set;
 	char string[5];
 	text_init(&system_set, &pos, 26);
@@ -119,7 +209,7 @@ static void room_card_numbe_display(void)
 }
 static void room_card_string_buf_display(void)
 {
-	position pos = {{120, 71}, {300, 40}};
+	position pos = {{160, 71}, {280, 40}};
 	text system_set;
 	char string[32] = {0}; // 初始化缓冲区，避免垃圾数据
 	text_init(&system_set, &pos, 26);
@@ -270,10 +360,10 @@ static void card_mange_dialog_box_init(void)
 	STR_Cursor cursor = {{{0, 0}, {0, 0}}, 0, 0, 3};
 	static char string[20];
 
-	position box_pos = {{120, 28}, {200, 40}};
+	position box_pos = {{160, 28}, {160, 40}};
 	icon_init(&box, &box_pos, NULL);
 	box.res.id = 0;
-	position pos = {{120, 28}, {200, 40}};
+	position pos = {{160, 28}, {160, 40}};
 	text_init(&font.text1, &pos, 26);
 	font.string1 = string;
 	font.text1.align = LEFT_TOP;
@@ -358,10 +448,8 @@ static void card_manage_dialog_box_font_change(void)
 
 static void card_manage_input_add_number(unsigned char number)
 {
-	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
-	{
+	if (card_manage_prompt_consume_key())
 		return;
-	}
 	if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER_CONFIRM)
 	{
 		return;
@@ -385,10 +473,8 @@ static void card_manage_input_add_number(unsigned char number)
 
 static void card_manage_input_sub_number(void)
 {
-	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
-	{
+	if (card_manage_prompt_consume_key())
 		return;
-	}
 	if (CardManageClass.dialog_box->cursor.index <= 0 || CardManageClass.cur_focus.main != UNIT_FOCUS)
 	{
 		return;
@@ -441,6 +527,38 @@ void check_and_set_card_data(int num)
 		}
 	}
 }
+
+static bool remove_unit_number_by_home_id(int home_id)
+{
+	int total = get_int_conf(UNIT_NUMBER_INDEX);
+	int max_total = sizeof(UserData.unit_number) / sizeof(UserData.unit_number[0]);
+
+	if (total <= 0)
+	{
+		return false;
+	}
+	if (total > max_total)
+	{
+		total = max_total;
+	}
+
+	for (int i = 0; i < total; i++)
+	{
+		if (UserData.unit_number[i] == home_id)
+		{
+			for (int j = i; j < total - 1; j++)
+			{
+				UserData.unit_number[j] = UserData.unit_number[j + 1];
+			}
+			UserData.unit_number[total - 1] = -1;
+			set_int_conf(UNIT_NUMBER_INDEX, total - 1);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 static void *saveCardData(void *arg)
 {
 	pthread_mutex_lock(&card_mutex);
@@ -459,20 +577,17 @@ static void card_manage_dialog_box_init(CARD_MANAGE_STATUS status_param)
 		return;
 	}
 
-	if (status_param < TOTAL_CARD_MANAGE_STATUS)
-	{
-		CardManageClass.cur_focus.status = status_param;
-	}
-
 	// ========== 固定执行的核心逻辑 ==========
 
 	CardManageClass.dialog_box->cursor.index = 0;
 	memset(CardManageClass.dialog_box->font.string1, 0, 10);
-	gui_erase(&CardManageClass.dialog_box->box.pos, 0XFF20428A);
-	CardManageClass.widget_show.dialog_box();
-	clear_text(120, 157, 200, 40, 0X00);
-	clear_text(120, 71, 300, 40, 0X00);
+	card_manage_page_redraw();
 	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
+
+	if (status_param != CARD_MANAGE_STATUS_NONE && status_param < TOTAL_CARD_MANAGE_STATUS)
+	{
+		card_manage_prompt_show(status_param);
+	}
 }
 
 static int get_room_card_number_by_room_num(int room_num)
@@ -532,7 +647,7 @@ static void card_manage_key9_up(void)
 static void card_manage_key_up_up(void)
 {
 	LOG_WHITE("card_manage_key_up_up\n");
-	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
+	if (card_manage_prompt_consume_key())
 		return;
 	clear_prev_card_manage_focus();
 	goto_prev_card_manage_focus();
@@ -542,7 +657,7 @@ static void card_manage_key_up_up(void)
 
 static void card_manage_key_down_up(void)
 {
-	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
+	if (card_manage_prompt_consume_key())
 		return;
 	clear_prev_card_manage_focus();
 	goto_next_card_manage_focus();
@@ -551,6 +666,8 @@ static void card_manage_key_down_up(void)
 
 static void card_manage_key_star_up(void)
 {
+	if (card_manage_prompt_consume_key())
+		return;
 	if (CardManageClass.dialog_box->cursor.index == 0 || CardManageClass.cur_focus.main != UNIT_FOCUS) // 返回
 		os_layout_goto(&layout_settings);
 
@@ -571,7 +688,7 @@ static void card_manage_key_star_up(void)
  */
 static void card_manage_key_ring_up(void)
 {
-	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
+	if (card_manage_prompt_consume_key())
 		return;
 	if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER)
 	{
@@ -603,11 +720,11 @@ static void card_manage_key_ring_up(void)
 			break;
 
 		case ERASE_FOCUS:
-			CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_ERROR;
+			card_manage_prompt_show(CARD_MANAGE_STATUS_ERROR);
 			break;
 
 		case SAVE_FOCUS:
-			CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_ERROR;
+			card_manage_prompt_show(CARD_MANAGE_STATUS_ERROR);
 			break;
 
 		default:
@@ -623,11 +740,15 @@ static void card_manage_key_ring_up(void)
 
 		case ERASE_FOCUS:
 			SwipingCard.mode = CARD_IDLE_MODE;
+			ak_thread_create(&thread_delete_card, delete_current_card,
+							 (void *)(calculateHomeId() * 10), ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
 			card_manage_dialog_box_init(CARD_MANAGE_STATUS_DELETE_CARD);
 			break;
 
 		case SAVE_FOCUS:
 			SwipingCard.mode = CARD_IDLE_MODE;
+			ak_thread_create(&thread_save_card, saveCardData,
+							 (void *)(calculateHomeId() * 10), ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
 			card_manage_dialog_box_init(CARD_MANAGE_STATUS_SAVE_CARD);
 			break;
 		default:
@@ -689,50 +810,28 @@ static void layout_card_manage_quit(void)
 }
 static void *delete_current_card(void *arg)
 {
-	LOG_WHITE("start delet %d\n", (int)arg);
+	int card_base = (int)arg;
+	int home_id = card_base / 10;
+
+	LOG_WHITE("start delet %d\n", card_base);
 	char string[32] = {0};
 
-	UserData.unit_number[(int)arg] = -1;
+	if (card_base < 0 || card_base + 9 >= USER_CARD_TOTAL)
+	{
+		LOG_RED("delete card index out of range:%d\n", card_base);
+		ak_thread_exit();
+		return NULL;
+	}
 
 	for (int i = 0; i < 10; i++)
 	{
-		set_card_id_data((int)arg + i, string);
+		set_card_id_data(card_base + i, string);
 	}
+	remove_unit_number_by_home_id(home_id);
 	card_id_data_save();
 	user_data_save();
-	set_int_conf(UNIT_NUMBER_INDEX, get_int_conf(UNIT_NUMBER_INDEX) - 1);
 	ak_thread_exit();
 	return NULL;
-}
-
-static ak_pthread_t thread_delete_card;
-static ak_pthread_t thread_save_card;
-static void handle_card_status_count_three(int num)
-{
-	switch (CardManageClass.cur_focus.status)
-	{
-	case CARD_MANAGE_STATUS_DELETE_CARD:
-		CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_SUCCESS;
-		CardManageClass.room_card_info.card_number_status_count = 0;
-		ak_thread_create(&thread_delete_card, delete_current_card,
-						 (void *)num, ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
-		break;
-	case CARD_MANAGE_STATUS_SAVE_CARD:
-		CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_SUCCESS;
-		CardManageClass.room_card_info.card_number_status_count = 0;
-		ak_thread_create(&thread_save_card, saveCardData,
-						 (void *)num, ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
-		break;
-	case CARD_MANAGE_STATUS_ERROR:
-		room_unit_number_error_font_display();
-		break;
-
-	case CARD_MANAGE_STATUS_SUCCESS:
-		room_unit_number_yes_font_display();
-		break;
-	default:
-		break;
-	}
 }
 
 static void handle_swiping_success(int num)
@@ -751,18 +850,9 @@ static void card_manage_success_font_display(void)
 	// 主状态处理
 	if (CardManageClass.cur_focus.status != CARD_MANAGE_STATUS_NONE)
 	{
-		if (CardManageClass.room_card_info.card_number_status_count == 3)
-		{
-			handle_card_status_count_three(num);
-		}
-
 		CardManageClass.room_card_info.card_number_status_count++;
-		if (CardManageClass.room_card_info.card_number_status_count >= 40)
-		{
-			CardManageClass.cur_focus.status = CARD_NUMBER_STATUS_NONE;
-			CardManageClass.room_card_info.card_number_status_count = 0;
-			delete_all_card_success_font_clear();
-		}
+		if (CardManageClass.room_card_info.card_number_status_count >= CARD_MANAGE_PROMPT_TIMEOUT_TICKS)
+			card_manage_prompt_close();
 	}
 
 	// 刷卡成功显示

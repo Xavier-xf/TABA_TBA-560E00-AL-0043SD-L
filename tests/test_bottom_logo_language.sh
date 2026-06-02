@@ -22,7 +22,7 @@ rg -q 'text_init\(&taba_text, &taba_text_pos, 36\)' "$layout_base"
 rg -q 'text_init\(&electronics_text, &electronics_text_pos, 20\)' "$layout_base"
 rg -q 'language_get\(\) == language_persian' "$layout_base"
 rg -Fq 'position taba_text_pos = {{120, 219}, {112, 44}}' "$layout_base"
-rg -Fq 'position electronics_text_pos = {{228, 226}, {150, 30}}' "$layout_base"
+rg -Fq 'position electronics_text_pos = {{210, 226}, {150, 30}}' "$layout_base"
 rg -Fq 'taba_text_pos = (position){{236, 219}, {86, 44}}' "$layout_base"
 rg -Fq 'electronics_text_pos = (position){{146, 226}, {126, 30}}' "$layout_base"
 

@@ -5,7 +5,15 @@
 
 #include "ak_thread.h"
 
+#define CARD_NUMBER_PROMPT_TIMEOUT_TICKS 67
+#define CARD_PROMPT_ERROR_COLOR 0xFFFF0000
+#define CARD_PROMPT_SUCCESS_COLOR 0xFFFFFFFF
+
 static int room_card_num = 0;
+static unsigned char card_number_prompt_count = 0;
+static ak_pthread_t thread_delete_card;
+
+static void *delete_current_card(void *arg);
 
 static void input_card_number_font_display(void)
 {
@@ -26,24 +34,69 @@ static void card_number_star_font_display(void)
 	text_display(&star_corre, font_str(STR_DIAL_STAR_CORRE));
 }
 
-static void card_number_success_font_display(void)
+static void card_number_prompt_display(STRING_ID str_id, unsigned int prompt_color)
 {
+	position box_pos = {{152, 73}, {236, 66}};
+	position text_pos = {{152, 73}, {236, 66}};
+	resource res = resource_get(ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG);
+	icon prompt_bg;
+	text prompt;
 
-	position pos = {{100, 108}, {258, 56}};
-	text success;
+	icon_init(&prompt_bg, &box_pos, &res);
+	icon_display(&prompt_bg);
 
-	text_init(&success, &pos, 20);
-	text_display(&success, font_str(STR_CARD_NUMBER_SUCCESS));
+	text_init(&prompt, &text_pos, 20);
+	prompt.align = CENTER_MIDDLE;
+	prompt.font_color = prompt_color;
+	text_display(&prompt, font_str(str_id));
 }
 
-// "Room number error"
-static void room_unit_number_error_font_display(void)
+static void card_number_page_redraw(void)
 {
-	position pos = {{100, 108}, {258, 56}};
-	text error;
+	position page_pos = {{0, 0}, {480, 193}};
 
-	text_init(&error, &pos, 20);
-	text_display(&error, font_str(STR_CARD_NUMBER_UNIT_NUMBER_ERROR));
+	gui_erase(&page_pos, 0x00000000);
+	CardNumberClass.widget_show.icon();
+	CardNumberClass.widget_show.font();
+	CardNumberClass.widget_show.dialog_box();
+}
+
+static void card_number_prompt_close(void)
+{
+	if (CardNumberClass.status == CARD_NUMBER_STATUS_NONE)
+	{
+		return;
+	}
+
+	CardNumberClass.status = CARD_NUMBER_STATUS_NONE;
+	card_number_prompt_count = 0;
+	card_number_page_redraw();
+}
+
+static bool card_number_prompt_consume_key(void)
+{
+	if (CardNumberClass.status == CARD_NUMBER_STATUS_NONE)
+	{
+		return false;
+	}
+
+	card_number_prompt_close();
+	return true;
+}
+
+static void card_number_prompt_show(CARD_NUMBER_STATUS status)
+{
+	CardNumberClass.status = status;
+	card_number_prompt_count = 0;
+
+	if (status == DELETE_CARD_NUMBER_SUCCESS)
+	{
+		card_number_prompt_display(STR_CARD_NUMBER_DELETE_SUCCESS, CARD_PROMPT_SUCCESS_COLOR);
+	}
+	else if (status == INPUT_CARD_NUMBER_ERROR)
+	{
+		card_number_prompt_display(STR_CARD_NUMBER_UNIT_NUMBER_ERROR, CARD_PROMPT_ERROR_COLOR);
+	}
 }
 
 // static void card_number_status_font_erase(void)
@@ -157,56 +210,78 @@ static void card_number_home_id_adjust(void)
 
 static void card_number_key0_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(0);
 }
 
 static void card_number_key1_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(1);
 }
 
 static void card_number_key2_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(2);
 }
 
 static void card_number_key3_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(3);
 }
 
 static void card_number_key4_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(4);
 }
 
 static void card_number_key5_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(5);
 }
 
 static void card_number_key6_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(6);
 }
 
 static void card_number_key7_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(7);
 }
 
 static void card_number_key8_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(8);
 }
 
 static void card_number_key9_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	card_number_input_add_number(9);
 }
 
 static void card_number_key_star_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	if (CardNumberClass.dialog_box->cursor.index == 0) // 返回
 	{
 		os_layout_goto(&layout_card_manage);
@@ -244,6 +319,8 @@ static void card_number_key_star_up(void)
 
 static void card_number_key_ring_up(void)
 {
+	if (card_number_prompt_consume_key())
+		return;
 	if (CardNumberClass.dialog_box->cursor.index == 0)
 	{
 		return;
@@ -274,11 +351,16 @@ static void card_number_key_ring_up(void)
 		card_number_home_id_adjust();
 
 		LOG_WHITE("DELETE_CARD_NUMBER_SUCCESS\n");
-		CardNumberClass.status = DELETE_CARD_NUMBER_SUCCESS;
+		int home_id = CardNumberClass.home_id[0] * 1000 +
+					  CardNumberClass.home_id[1] * 100 +
+					  CardNumberClass.home_id[2] * 10 +
+					  CardNumberClass.home_id[3];
+		int num = home_id * 10;
+		ak_thread_create(&thread_delete_card, delete_current_card, (void *)num, ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
+		card_number_prompt_show(DELETE_CARD_NUMBER_SUCCESS);
 
 		CardNumberClass.dialog_box->cursor.index = 0;
 		memset(CardNumberClass.dialog_box->font.string1, 0, 10);
-		CardNumberClass.widget_show.dialog_box();
 	}
 }
 
@@ -372,65 +454,78 @@ static void layout_card_number_quit(void)
 	memset(CardNumberClass.dialog_box->font.string1, 0, 10);
 }
 
+static bool remove_unit_number_by_home_id(int home_id)
+{
+	int total = get_int_conf(UNIT_NUMBER_INDEX);
+	int max_total = sizeof(UserData.unit_number) / sizeof(UserData.unit_number[0]);
+
+	if (total <= 0)
+	{
+		return false;
+	}
+	if (total > max_total)
+	{
+		total = max_total;
+	}
+
+	for (int i = 0; i < total; i++)
+	{
+		if (UserData.unit_number[i] == home_id)
+		{
+			for (int j = i; j < total - 1; j++)
+			{
+				UserData.unit_number[j] = UserData.unit_number[j + 1];
+			}
+			UserData.unit_number[total - 1] = -1;
+			set_int_conf(UNIT_NUMBER_INDEX, total - 1);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 static void *delete_current_card(void *arg)
 {
-	LOG_WHITE("start delet %d\n", (int)arg);
+	int card_base = (int)arg;
+	int home_id = card_base / 10;
+
+	LOG_WHITE("start delet %d\n", card_base);
 	char string[32] = {0};
 	room_card_num = 0;
-	UserData.unit_number[(int)arg] = -1;
+
+	if (card_base < 0 || card_base + 9 >= USER_CARD_TOTAL)
+	{
+		LOG_RED("delete card index out of range:%d\n", card_base);
+		ak_thread_exit();
+		return NULL;
+	}
 
 	for (int i = 0; i < 10; i++)
 	{
-		if (strlen(get_card_id_data((int)arg + i)) == 0)
+		if (strlen(get_card_id_data(card_base + i)) == 0)
 		{
 
 			break;
 		}
-		set_card_id_data((int)arg + i, string);
+		set_card_id_data(card_base + i, string);
 		room_card_num++;
 	}
+	remove_unit_number_by_home_id(home_id);
 	card_id_data_save();
 	user_data_save();
-	set_int_conf(UNIT_NUMBER_INDEX, get_int_conf(UNIT_NUMBER_INDEX) - 1);
 
 	ak_thread_exit();
 	return NULL;
 }
 
-static ak_pthread_t thread_delete_card;
 static void card_number_status_font_display(void)
 {
-	static char card_number_status_count = 0;
-
-	int home_id = CardNumberClass.home_id[0] * 1000 +
-				  CardNumberClass.home_id[1] * 100 +
-				  CardNumberClass.home_id[2] * 10 +
-				  CardNumberClass.home_id[3];
-
 	if (CardNumberClass.status != CARD_NUMBER_STATUS_NONE)
 	{
-		if (card_number_status_count == 3)
-		{
-			if (CardNumberClass.status == DELETE_CARD_NUMBER_SUCCESS)
-			{
-				int num = home_id * 10;
-				ak_thread_create(&thread_delete_card, delete_current_card, (void *)num, ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
-				// delete_current_card(home_id*10);
-				card_number_success_font_display();
-			}
-			if (CardNumberClass.status == INPUT_CARD_NUMBER_ERROR)
-				room_unit_number_error_font_display();
-		}
-
-		card_number_status_count++;
-
-		if (card_number_status_count >= 40)
-		{
-			CardNumberClass.status = CARD_NUMBER_STATUS_NONE;
-			card_number_status_count = 0;
-			// card_number_status_font_erase();
-			card_number_dialog_display();
-		}
+		card_number_prompt_count++;
+		if (card_number_prompt_count >= CARD_NUMBER_PROMPT_TIMEOUT_TICKS)
+			card_number_prompt_close();
 	}
 }
 

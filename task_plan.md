@@ -81,3 +81,83 @@
    - 大楼机侧补充 `busy` 状态、`500ms` 恢复延时、`4000ms` 超时自动释放，并将接收处理前置到心跳检查前。
    - 分支器侧将“在线刷新”从心跳专用扩展到任意成功解析的主站命令，避免业务期误判断线闪灯。
    - 本次不并入“读房号重读”，避免在未实现“退出即取消事务、忽略旧回复”前引入新的界面状态污染风险。
+
+13. [complete] 卡片提示弹框、输入框排版和英文 Logo 间距
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_card_manage.c`：卡管理页错误/添卡成功/删卡成功提示改为可取消弹框，任意按键先关闭，约 2 秒自动关闭。
+     - `app_cu_datin/system/layout/layout_card_number.c`：房号输入/删卡页提示改为可取消弹框，删除成功文案独立显示。
+     - `app_cu_datin/system/layout/language.h`、`app_cu_datin/system/layout/language.c`：新增 `Add card success`、`Delete card success` 文案。
+     - `app_cu_datin/system/layout/layout_base.c`：收紧英文底部 `TABA` 与 `Electronics` 的显示间距。
+     - `tests/test_card_prompt_interaction.sh`、`tests/test_bottom_logo_language.sh`：新增/更新静态回归检查。
+   - 验证结果：
+     - `bash tests/test_card_prompt_interaction.sh`、`bash tests/test_bottom_logo_language.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh`、`bash tests/test_brancher_heartbeat.sh` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过，生成 `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`。
+     - 包验证按既有方式单独执行 `partition_image.sh app_resource`，只打包 APP 分区。
+
+14. [complete] 修正卡管理弹窗观感、残留清理和 Logo 裁剪
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_base.c`：恢复英文 `TABA` 足够宽度，收紧但不裁剪 `Electronics` 间距。
+     - `app_cu_datin/system/layout/layout_card_manage.c`：弹窗背景改为 `#5D7798`，使用不透明擦除覆盖底字；关闭弹窗后重绘上半页，清掉残留；统一 UNIT/TAG/ERASE/SAVE 右侧列 x 坐标。
+     - `app_cu_datin/system/layout/layout_card_number.c`：弹窗背景改为 `#5D7798`，关闭后重绘上半页。
+     - `tests/test_card_prompt_interaction.sh`、`tests/test_bottom_logo_language.sh`：更新静态验收。
+   - 明确约束：
+     - 不修改 `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh`。
+     - 构建后只打 APP 分区时，使用既有 `partition_image.sh app_resource`。
+   - 验证结果：
+     - `bash tests/test_card_prompt_interaction.sh`、`bash tests/test_bottom_logo_language.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh`、`bash tests/test_brancher_heartbeat.sh` 通过。
+     - `cd app_cu_datin && make` 通过且无新增警告。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过，期间 `mkfs.jffs2` 仍有沙箱内已知“错误的系统调用”。
+     - `cd AK37E_SDK_V1.03/upgrade && env upgrade_bin_version=20260529172629 ./partition_image.sh app_resource` 通过。
+     - 最终 `HALL_MACHINEOS` 大小 569K，分区头为 `# File Parttion: app.sqsh4 0 581632`。
+     - 编译脚本 diff 为空。
+
+15. [complete] 缩小卡管理提示框并清除保存/删除后的 TAG/SAVE 残留
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_card_manage.c`：提示框改为 `left=115, top=59, width=250, height=75`；保存/删除/成功提示关闭后清空 TAG 和 SAVE 后面的结果字段，并在退出添卡模式时清掉 `SwipingCard.success_show`，避免旧值被定时重画。
+     - `app_cu_datin/system/layout/layout_card_number.c`：房号提示框同步改为 `left=115, top=59, width=250, height=75`。
+     - `tests/test_card_prompt_interaction.sh`：增加提示框坐标尺寸和结果字段清理的静态验收。
+   - 说明：
+     - 当前 UI 库只有矩形 `gui_erase()` / `draw_rect()`，没有圆角矩形 API；本轮实现尺寸、位置、颜色和不透明度，暂不实现真实 `border-radius: 6px`。
+   - 验证计划：
+     - `bash tests/test_card_prompt_interaction.sh`
+     - `bash tests/test_bottom_logo_language.sh`
+     - `cd app_cu_datin && make`
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk`
+     - `cd AK37E_SDK_V1.03/upgrade && env upgrade_bin_version=20260529174518 ./partition_image.sh app_resource`
+
+16. [complete] RFID 提示框改用 rfid_focus 资源并区分文字颜色
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_card_manage.c`：卡管理提示框不再使用纯色矩形，改为显示 `rfid_focus.png`；错误提示文字红色，成功提示文字白色。
+     - `app_cu_datin/system/layout/layout_card_number.c`：删卡房号页提示框同步改为 `rfid_focus.png`；错误红色，成功白色。
+     - `tests/test_card_prompt_interaction.sh`：更新静态验收，禁止旧纯色提示框，校验 `rfid_focus` 资源、文字颜色和新位置。
+   - 用户指定位置：
+     - 最终参考用户指定位置调整为 `left=152, top=73`。
+     - 资源自身尺寸为 `236x66`，因此显示区域为 `{{152, 73}, {236, 66}}`。
+     - UNIT/TAG/ERASE/SAVE 右侧输入/输出列统一移到 `x=160`，避免压到 `ERASE:` 标签显示区域。
+   - 验证结果：
+     - `bash tests/test_card_prompt_interaction.sh` 通过。
+     - `git diff --check -- app_cu_datin/system/layout/layout_card_manage.c app_cu_datin/system/layout/layout_card_number.c tests/test_card_prompt_interaction.sh` 通过。
+     - `cd app_cu_datin && make` 通过。
+
+17. [complete] 修正提示框后暴露的待机时钟、字体缓冲和删卡越界风险
+   - 文件计划：
+     - `app_cu_datin/ui_lib/analog_clock.c`：修正 `clock_dot_buffer` 释放对象错误，并清零 `analog_clock_dst_buffer`。
+     - `app_cu_datin/ui_lib/font_decodec.c`：字体临时缓冲分配失败时安全退出，分配成功后清零，减少脏像素/阴影残留。
+     - `app_cu_datin/system/layout/layout_card_manage.c`：删卡线程按 `home_id` 查找并移除 `UserData.unit_number[]` 项，避免把 `home_id * 10` 当数组下标。
+     - `app_cu_datin/system/layout/layout_card_number.c`：删卡房号页同步修正相同删除风险。
+     - `findings.md`、`progress.md`：补充根因、风险和验证记录。
+   - 验证结果：
+     - `bash tests/test_card_prompt_interaction.sh` 通过。
+     - `bash tests/test_bottom_logo_language.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+     - `bash tests/test_brancher_heartbeat.sh` 通过。
+     - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_card_manage.c app_cu_datin/system/layout/layout_card_number.c app_cu_datin/ui_lib/analog_clock.c app_cu_datin/ui_lib/font_decodec.c findings.md progress.md task_plan.md` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；期间 `mkfs.jffs2` 在沙箱内仍打印已知“错误的系统调用”，APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+     - 已在沙箱外重建 `platform/config.jffs2`、`platform/data.jffs2`、`platform/tuya.jffs2`，避免 `autobuild` 后平台目录残缺。
+     - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260602144956 && ./partition_image.sh app_resource` 通过。
+     - 最终 `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS` 只包含 `app.sqsh4`，大小 `594031 bytes`，包头 `# File Parttion: app.sqsh4 0 593920`。
+     - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。

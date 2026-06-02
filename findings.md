@@ -42,3 +42,28 @@
 - 正式实现不应只依赖“最近活动时间戳”，还需要明确的 busy 状态和超时兜底；否则异常路径可能让心跳长期停发或恢复时机不稳定。
 - 分支器在线判定不能只靠 `CMD_HEARTBEAT`，因为业务通信期间大楼机会暂停心跳；如果分支器不把其他有效主站命令也视为在线活动，长业务期会误判断线闪灯。
 - 本次先不并入“读房号重读”，因为重读若没有“退出页面取消事务、忽略旧回复”的配套机制，用户在房号未返回时直接退出页面，迟到回复仍可能污染界面状态。
+
+## 卡管理弹窗和底部 Logo 显示问题
+- 英文底部 Logo 中 `TABA` 的文本框从 `112` 缩到 `86` 后，36 号字体下最后一个 `A` 容易被裁剪；应保留足够宽度，再通过移动起点收紧与 `Electronics` 的视觉间距。
+- 弹窗使用 `draw_rect()` 会按 ARGB 混合绘制，如果底层已有文字，视觉上仍可能显得“底下有字”；提示弹窗应使用 `gui_erase()` 以不透明颜色直接覆盖。
+- 弹窗关闭时只擦弹窗局部区域不够稳妥，因为弹窗覆盖了卡管理页面多个文本行；关闭后应清理上半页并按当前页面状态重绘字体、输入框、焦点和当前卡号信息。
+- 卡管理页右侧输入/输出列应统一使用 `x = 120`，避免 UNIT/TAG/ERASE/SAVE 对齐不一致。
+- 保存/删除成功提示关闭后，不能继续按旧的 `room_card_string_buf_display()` 和 `room_card_numbe_display()` 重画结果值；否则会把 `TAG:` 后的卡号和 `SAVE:` 后的数量再次画回来。
+- 保存/删除已经将 `SwipingCard.mode` 置为 `CARD_IDLE_MODE`，所以提示关闭后需要按“非添卡模式”清理；同时要清掉 `SwipingCard.success_show`，否则定时器仍可能再走一次刷卡成功重画，把旧 TAG/SAVE 值补回来。
+- 当前 UI 基础库只有矩形绘制/擦除，没有圆角矩形 API；提示框可以按要求调整位置、尺寸、颜色和不透明度，但 `border-radius: 6px` 需要新增底层绘制能力或使用圆角图片资源。
+
+## RFID 提示框资源替换
+- 用户新增 `app_cu_datin/system/ui/r/img/card_maneage/rfid_focus.png` 作为 RFID 消息框背景，`rom.h` 已生成 `ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG`，资源尺寸为 `236x66`。
+- 旧方案使用 `gui_erase(..., 0xFF5D7798)` 画纯色提示框；新方案应直接绘制 `rfid_focus.png`，避免继续维护纯色矩形背景。
+- 提示框最终参考用户指定位置调整为 `left=152, top=73`，结合资源尺寸，代码显示区域使用 `{{152, 73}, {236, 66}}`。
+- 卡管理标签从 `x=33` 开始、宽 `120`，显示区域到 `x=153`；旧右侧列 `x=120` 会压进 `ERASE:` 标签区域，因此右侧输入/输出列统一移动到 `x=160`。
+- 提示文字颜色按结果区分：错误信息使用红色 `0xFFFF0000`，成功信息使用白色 `0xFFFFFFFF`。
+- `tests/test_card_prompt_interaction.sh` 原先混入底部 Logo 位置检查，本轮将其从卡片提示测试移除；Logo 仍由 `tests/test_bottom_logo_language.sh` 独立覆盖，避免无关断言影响 RFID 提示框验证。
+
+## 提示框后待机死机和删卡越界风险
+- `analog_clock_deinit()` 在 `clock_dot_buffer != NULL` 分支里释放了 `analog_clock_dst_buffer`，导致 `clock_dot_buffer` 泄漏，并可能让 `analog_clock_dst_buffer` 被错误释放路径处理；待机退出和重新进入时属于高风险内存错误。
+- `analog_clock_dst_buffer` 作为指针旋转/合成的中间缓冲，分配后如果不清零，复用到脏内存时可能放大残影或异常颜色。
+- `font_decodec()` 的临时灰度缓冲分配后未清零，FreeType 字形只写入实际覆盖区域；未覆盖区域的旧数据可能参与后续绘制，表现为红字/白字边缘有重叠阴影或脏像素。
+- 删卡线程参数实际是卡片数据起始编号 `home_id * 10`，不是 `UserData.unit_number[]` 的数组下标；旧代码 `UserData.unit_number[(int)arg] = -1` 会把卡号索引当房号列表下标，典型房号如 `1001` 会写到 `10010`，超过 `unit_number[10000]`。
+- 正确删除房号的方式应按 `home_id` 在 `UserData.unit_number[]` 当前有效范围内查找，找到后前移后续项并将 `UNIT_NUMBER_INDEX` 减 1；如果找不到，不应盲目减少计数。
+- 当前 C 源多数是 CRLF 文件，普通 `git diff --check` 会把行尾 CR 报为 trailing whitespace；本轮使用 `git -c core.whitespace=cr-at-eol diff --check` 检查真实空白问题。

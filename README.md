@@ -130,6 +130,135 @@ cd app_cu_datin
 
 
 
+## 2026-06-02（待机时钟、字体缓冲和删卡越界修正）
+
+### 问题描述：
+
+新增卡管理提示框后，设备在待机或退出待机时可能出现时钟颜色异常、短暂白屏后死机等问题；同时卡管理删除房号时存在把卡号索引当作房号数组下标写入的风险，可能造成内存越界。
+
+### 问题原因：
+
+待机时钟释放逻辑中，`clock_dot_buffer` 分支错误释放了 `analog_clock_dst_buffer`，导致点缓冲泄漏并增加重复释放/错误释放风险；字体渲染临时缓冲未清零，旧像素可能参与红色或白色提示文字绘制；删卡线程参数实际为 `home_id * 10` 的卡片数据起始编号，旧逻辑却直接作为 `UserData.unit_number[]` 下标使用。
+
+### 解决方法：
+
+修正待机时钟各缓冲的释放对象和初始化逻辑；字体缓冲分配后先清零并增加分配失败处理；删卡时先按 `home_id` 在 `UserData.unit_number[]` 有效范围内查找真实位置，找到后前移后续房号并更新计数，不再直接使用卡片起始编号写房号数组。
+
+### 涉及文件：
+
+- `app_cu_datin/ui_lib/analog_clock.c`
+- `app_cu_datin/ui_lib/font_decodec.c`
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/layout_card_number.c`
+
+### 具体修改：
+
+- 在 `analog_clock_dst_init()` 中对 `analog_clock_dst_buffer` 分配后的内存清零。
+- 在 `analog_clock_deinit()` 中将 `clock_dot_buffer` 与 `analog_clock_dst_buffer` 分别释放并置空。
+- 在 `font_decodec()` 中增加字体缓冲分配失败判断，并在分配成功后执行 `memset` 清零。
+- 在卡管理页和删卡房号页新增按 `home_id` 删除 `UserData.unit_number[]` 的逻辑，避免 `home_id * 10` 作为数组下标造成越界。
+- 删除卡槽前增加 `card_base` 范围检查，避免访问超过 `USER_CARD_TOTAL` 的卡片数据。
+- 提示框显示区域同步 `rfid_focus.png` 实际尺寸，使用 `{{152, 73}, {236, 66}}`。
+
+
+
+## 2026-06-01（RFID 提示框资源替换）
+
+### 问题描述：
+
+卡管理提示框使用纯色背景时辨识度不足，错误/成功提示不够清晰；用户新增 `rfid_focus.png` 作为 RFID 消息框背景，需要替换旧的纯色消息框，并按结果类型区分文字颜色。
+
+### 问题原因：
+
+旧提示框由程序绘制纯色矩形，容易与背景和底层文字混在一起；提示框尺寸和坐标未跟随新资源统一，且 UNIT、TAG、ERASE、SAVE 右侧输入/输出列位置过靠左，部分内容会压到 `ERASE:` 标签显示区域。
+
+### 解决方法：
+
+卡管理页和删卡房号页统一使用 `rfid_focus.png` 作为提示框背景；错误提示使用红色文字，成功提示使用白色文字；提示框按用户确认的位置显示，并统一右侧输入/输出列的横坐标。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/layout_card_number.c`
+- `app_cu_datin/system/ui/rom.h`
+- `app_cu_datin/system/ui/r/img/card_maneage/rfid_focus.png`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 将卡管理页提示框改为绘制 `ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG`。
+- 将删卡房号页提示框同步改为绘制 `ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG`。
+- 错误提示文字颜色设置为 `0xFFFF0000`，成功提示文字颜色设置为 `0xFFFFFFFF`。
+- 提示框位置使用 `left=152, top=73`，显示区域使用资源实际尺寸 `236x66`。
+- 将 UNIT、TAG、ERASE、SAVE 右侧输入/输出列统一移动到 `x=160`。
+- 静态测试禁止继续使用旧的纯色提示框宏，并校验 RFID 资源、提示颜色和位置。
+
+
+
+## 2026-05-29（卡管理提示框缩小和残留清理）
+
+### 问题描述：
+
+卡管理提示框尺寸偏大、位置不够合适；保存或删除提示框消失后，`TAG:` 后的卡号以及 `SAVE:` 后的数量仍可能残留在界面上。
+
+### 问题原因：
+
+提示框关闭后只做局部擦除和重绘，未区分当前是否仍处于添卡模式；保存和删除操作已经将刷卡模式切回空闲，但旧的卡号缓存、房间卡数量和成功显示标记仍可能被定时刷新逻辑再次绘制出来。
+
+### 解决方法：
+
+缩小并调整提示框位置；提示框关闭时根据 `SwipingCard.mode` 判断是否仍在添卡模式，如果仍在添卡模式则重画当前卡号和数量，如果已经退出添卡模式则清空 TAG 和 SAVE 后面的结果信息。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/layout_card_number.c`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 将卡管理页提示框调整为 `left=115, top=59, width=250, height=75`。
+- 将删卡房号页提示框同步调整为 `left=115, top=59, width=250, height=75`。
+- 新增结果字段清理逻辑，清除 `TAG:` 后的卡号和 `SAVE:` 后的数量显示。
+- 保存或删除后清空 `SwipingCard.string_buf[10]`、房间卡数量缓存和 `SwipingCard.success_show`，避免旧值被定时重画。
+- 提示框关闭时按 `SwipingCard.mode == CARD_ADD_CARD_MODE` 区分重画旧值还是清掉旧值。
+- 当前 GUI 库没有圆角矩形 API，因此未实现真实 `border-radius: 6px`；如后续必须圆角，需要新增底层绘制能力或使用圆角图片资源。
+
+
+
+## 2026-05-29（卡管理弹窗和 Logo 修正）
+
+### 问题描述：
+
+英文底部 `TABA Electronics` logo 中 `TABA` 最后一个 `A` 显示异常；卡管理错误/成功提示框与背景颜色接近，覆盖底字后不够像独立弹窗；弹窗关闭后可能留下输入框、卡号或标签残影；UNIT、TAG、ERASE、SAVE 右侧列位置不统一。
+
+### 问题原因：
+
+英文 `TABA` 文本框宽度过窄导致字体被裁剪；旧弹窗背景与页面背景接近，且只擦除局部区域时无法稳定清理底层文字；卡管理右侧输入/输出区域坐标不一致，`ERASE` 行更容易出现对齐和覆盖问题。
+
+### 解决方法：
+
+恢复 `TABA` 足够宽的文本显示区域，同时收紧 `Electronics` 与 `TABA` 的视觉间距；提示框改为更明显的背景色并覆盖底字；关闭弹窗后重绘上半页；统一卡管理右侧输入/输出列坐标。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_base.c`
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/layout_card_number.c`
+- `tests/test_bottom_logo_language.sh`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 英文 `TABA` 使用足够宽的文本框，避免最后一个 `A` 被裁剪。
+- 调整 `Electronics` 坐标，使其与 `TABA` 更靠近但不重叠。
+- 卡管理提示框背景改为 `#5D7798`，提高与原页面背景的区分度。
+- 弹窗关闭后清理并重绘上半页，减少输入框、卡号和标签残影。
+- 卡管理 UNIT、TAG、ERASE、SAVE 右侧输入/输出列统一对齐。
+- 保持 `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 不改动；需要只打 APP 分区时继续使用 `partition_image.sh app_resource`。
+
+
+
 ## 2026-05-26（心跳避让业务通信正式实现）
 
 ### 问题描述：

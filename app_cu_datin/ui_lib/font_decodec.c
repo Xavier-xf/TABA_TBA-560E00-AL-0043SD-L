@@ -215,6 +215,12 @@ bool font_decodec(font_decodec_info* info)
 	int image_width = info->pos->vector.width;
 	int image_height = ascender*3/2;
 	buffer = (unsigned char*)ak_mem_alloc(MODULE_ID_APP,image_width*image_height);
+	if(buffer == NULL)
+	{
+		reslut = false;
+        goto FONT_DECODEC_FINISH;
+	}
+	memset(buffer, 0, image_width*image_height);
 
     FT_Int  n,i, j, p, q,x_max,y_max,x_base,y_base;
 	FT_Vector pen = {0,0};

@@ -197,3 +197,95 @@
   - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`
   - 包头：`# File Parttion: app.sqsh4 0 581632`
   - 包大小：`581,743 bytes`
+
+## 2026-05-29 卡管理弹窗和 Logo 修正
+- 用户指出本轮应继续使用文件式 planning，并补写 `findings.md` / `progress.md`；当前环境没有可用的 `planning-with-files` skill，但继续维护 `task_plan.md`、`findings.md`、`progress.md`。
+- 已恢复上一轮误改的编译脚本：
+  - `app_cu_datin/autobuild.sh` 无 diff。
+  - `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+  - 删除上一轮为脚本改动新增的 `tests/test_autobuild_app_resource_packaging.sh`。
+- 本轮约束：不要通过改脚本实现 app-only；需要只打 APP 分区时，按既有流程在 SDK `upgrade` 目录执行 `partition_image.sh app_resource`。
+- 已定位 UI 问题：
+  - `TABA` 文本框过窄导致最后 `A` 裁剪。
+  - 弹窗颜色与背景接近且使用混合绘制，不够像独立对话框。
+  - 关闭弹窗只擦局部，容易留下输入框/卡号/标签残影。
+  - `ERASE` 行右侧列 x 坐标与其他行不一致。
+- 已更新静态测试：
+  - `tests/test_bottom_logo_language.sh`
+  - `tests/test_card_prompt_interaction.sh`
+- 已修改界面实现：
+  - 英文 `TABA` 使用足够宽的文本框，`Electronics` 保持更近但不压到 `TABA`。
+  - 弹窗背景改为 `#5D7798`，并使用不透明 `gui_erase()` 覆盖底字。
+  - 弹窗关闭后清理上半页并重绘页面内容。
+  - 卡管理右侧列统一到 `x = 120`。
+- 已完成验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_bottom_logo_language.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `cd app_cu_datin && make` 通过且无新增警告。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；原始脚本仍会在沙箱内打印 `mkfs.jffs2` “错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成完成。
+  - `cd AK37E_SDK_V1.03/upgrade && env upgrade_bin_version=20260529172629 ./partition_image.sh app_resource` 通过。
+  - 最终 `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS` 为 569K，包头只包含 `# File Parttion: app.sqsh4 0 581632`。
+  - `app_cu_datin/autobuild.sh`、`AK37E_SDK_V1.03/upgrade/make_image.sh`、`tests/test_autobuild_app_resource_packaging.sh` 无 diff。
+
+## 2026-05-29 卡管理提示框缩小和残留清理
+- 用户反馈：Logo 已正常；提示框太大且位置不好，建议 `left=115, top=59, width=250, height=75, opacity=1, border-radius=6px`；保存/删除提示框销毁后 `TAG:` 后的卡号和 `SAVE:` 后的数量仍残留。
+- 已确认当前环境没有可用的 `planning-with-file-zh` skill；继续按该流程维护 `task_plan.md`、`findings.md`、`progress.md`。
+- 已按 TDD 更新 `tests/test_card_prompt_interaction.sh`：
+  - 校验卡管理页和房号页提示框坐标尺寸为 `{{115, 59}, {250, 75}}`。
+  - 校验卡管理页存在结果字段清理函数。
+- 已修改：
+  - `layout_card_manage.c`：提示框改为 `250x75`、位置 `115,59`；保存/删除/成功提示关闭后清空 `TAG` 和 `SAVE` 结果字段，并清空 `SwipingCard.string_buf[10]`、房间卡数量缓存和 `SwipingCard.success_show`，避免旧值被定时重画。
+  - `layout_card_number.c`：提示框同步改为 `250x75`、位置 `115,59`。
+- 用户进一步确认：如果仍在 `CARD_ADD_CARD_MODE` 可以重画旧值；保存/删除后已经退出添卡模式，应清掉信息。已按 `SwipingCard.mode == CARD_ADD_CARD_MODE` 作为分支条件核对并补强。
+- 说明：当前 GUI 库没有圆角矩形 API，本轮没有实现真实 `border-radius: 6px`；如必须圆角，需要新增底层圆角绘制或做一张圆角背景图片资源。
+- 已完成验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；原始脚本仍打印已知 `mkfs.jffs2` 沙箱错误。
+  - `cd AK37E_SDK_V1.03/upgrade && env upgrade_bin_version=20260529174518 ./partition_image.sh app_resource` 通过。
+
+## 2026-06-01 RFID 提示框资源替换
+- 用户新增 `rfid_focus` 作为 RFID 消息框，要求不再使用原先纯色消息框；错误信息红色，成功信息白色。
+- 用户反馈 `{{120, 52}, {241, 77}}` 偏上偏左，要求参考 `top=73px, left=152px`；当前 `rfid_focus.png` 尺寸为 `236x66`，代码显示区域调整为 `{{152, 73}, {236, 66}}`。
+- 用户反馈 UNIT/ERASE/SAVE 输入内容压到 `ERASE:` 显示区域；已将 UNIT/TAG/ERASE/SAVE 右侧输入/输出列统一移动到 `x=160`。
+- 已按 TDD 更新 `tests/test_card_prompt_interaction.sh`：
+  - 校验卡管理页和删卡房号页使用 `ROM_R_IMG_CARD_MANEAGE_RFID_FOCUS_PNG`。
+  - 校验错误颜色 `0xFFFF0000`、成功颜色 `0xFFFFFFFF`。
+  - 禁止继续使用 `CARD_MANAGE_PROMPT_BG_COLOR` / `CARD_NUMBER_PROMPT_BG_COLOR` 纯色提示框。
+- 已修改：
+  - `app_cu_datin/system/layout/layout_card_manage.c`：提示框改为绘制 `rfid_focus.png`，错误提示红色，添卡/删卡/成功提示白色。
+  - `app_cu_datin/system/layout/layout_card_number.c`：提示框改为绘制 `rfid_focus.png`，房号错误红色，删除成功白色。
+  - `tests/test_card_prompt_interaction.sh`：移除无关的底部 Logo 位置断言，Logo 独立测试仍由 `tests/test_bottom_logo_language.sh` 覆盖。
+- 已完成验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `git diff --check -- app_cu_datin/system/layout/layout_card_manage.c app_cu_datin/system/layout/layout_card_number.c tests/test_card_prompt_interaction.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+
+## 2026-06-02 待机时钟、字体缓冲和删卡越界修正
+- 用户要求继续上次未完成的优化，并明确使用 Superpowers 和 context-engineering-marketplace；当前会话中 Superpowers 插件已启用，context-engineering-marketplace 未作为可调用插件暴露，本轮继续维护 `task_plan.md`、`findings.md`、`progress.md`。
+- 已按 `systematic-debugging` 先复核根因和当前 diff：
+  - `analog_clock_deinit()` 释放 `clock_dot_buffer` 时错放成 `analog_clock_dst_buffer`。
+  - `font_decodec()` 分配临时缓冲后未清零，可能让旧像素参与字体绘制。
+  - `layout_card_manage.c` 和 `layout_card_number.c` 的删卡线程参数是 `home_id * 10`，旧代码把它当作 `UserData.unit_number[]` 下标写入，存在越界风险。
+- 已修改：
+  - `app_cu_datin/ui_lib/analog_clock.c`：`analog_clock_dst_buffer` 分配后清零；`clock_dot_buffer` 分支释放自身；`analog_clock_dst_buffer` 单独释放并置空。
+  - `app_cu_datin/ui_lib/font_decodec.c`：字体缓冲分配失败时返回失败；分配成功后 `memset` 清零。
+  - `app_cu_datin/system/layout/layout_card_manage.c`：新增按 `home_id` 查找并移除 `UserData.unit_number[]` 的辅助函数；删卡前检查 `card_base` 范围；删除卡槽后只在找到房号时递减 `UNIT_NUMBER_INDEX`。
+  - `app_cu_datin/system/layout/layout_card_number.c`：同步修正删卡房号页的房号列表删除逻辑和卡槽范围检查。
+  - `app_cu_datin/system/layout/layout_card_manage.c`、`app_cu_datin/system/layout/layout_card_number.c`：提示框位置保持 `{{152, 73}}`，尺寸同步资源实际 `236x66`。
+- 已完成静态验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_bottom_logo_language.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_card_manage.c app_cu_datin/system/layout/layout_card_number.c app_cu_datin/ui_lib/analog_clock.c app_cu_datin/ui_lib/font_decodec.c` 通过。
+- 已完成编译与打包：
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；期间 `mkfs.jffs2` 在沙箱内仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`，避免 `autobuild` 后平台目录残缺。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260602144956 && ./partition_image.sh app_resource` 通过。
+  - 最终 APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`。
+  - 包头：`# File Parttion: app.sqsh4 0 593920`。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。

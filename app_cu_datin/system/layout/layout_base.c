@@ -226,7 +226,7 @@ void taba_btn_display(void)
     icon_display(&star);
 
     position taba_text_pos = {{120, 219}, {112, 44}};
-    position electronics_text_pos = {{228, 226}, {150, 30}};
+    position electronics_text_pos = {{210, 226}, {150, 30}};
 
     if (language_get() == language_persian)
     {

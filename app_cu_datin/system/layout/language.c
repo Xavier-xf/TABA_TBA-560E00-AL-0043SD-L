@@ -32,7 +32,7 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Unlock Password", "تنظیمات رمز درب بازکن"},
 		{"Setting Password", "تنظیمات رمز ورودی"},
 		{"OutPut", "خروجی"},
-		{"NFC", "کارت دسترسی"},
+		{"RFID", "کارت دسترسی"},
 		// layout system set font
 		{"Time and Date", "ساعت و تاریخ"},
 		{"Language", "زبان"},
@@ -75,6 +75,8 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		// layout card number font
 		{"Please enter room number", "لطفا شماره اتاق را وارد کنید"},
 		{"Success", "موفق"}, // 50
+		{"Add card success", "کارت اضافه شد"},
+		{"Delete card success", "کارت حذف شد"},
 		{"Room number error", "شماره اتاق وجود ندارد"},
 		// layout swiping number font
 		{"Please put your card in the card section", "لطفا کارت را در قسمت کارتخوانی قرار دهید"},
