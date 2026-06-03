@@ -20,6 +20,13 @@ static const position HomeIdSetFocusPos[HOME_ID_SET_TOTAL_DIALOG_BOX] =
 		{{256, 113}, {92, 60}},
 		{{372, 113}, {92, 60}}};
 
+static void home_id_set_prepare_input_replace(void);
+static void home_id_set_mark_replace_on_next_input(void);
+static bool home_id_set_save_dirty_current(void);
+
+static bool home_id_replace_on_next_input[HOME_ID_SET_TOTAL_DIALOG_BOX] = {false};
+static bool home_id_input_dirty[HOME_ID_SET_TOTAL_DIALOG_BOX] = {false};
+
 static void OUT_font_display(void)
 {
 	position pos = {{40, 15}, {150, 40}};
@@ -388,13 +395,15 @@ static void home_id_set_input_number_display(void)
  *********************************************************************************************************/
 static void home_id_set_add_number(unsigned char number)
 {
+	home_id_set_prepare_input_replace();
+
 	unsigned char index = HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->cursor.index;
 	unsigned char max_index = HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->cursor.max_index;
 
-	HomeIdSetClass.show_id[HomeIdSetClass.cur_focus][index] = number;
-
 	if (index <= max_index)
 	{
+		HomeIdSetClass.show_id[HomeIdSetClass.cur_focus][index] = number;
+		home_id_input_dirty[HomeIdSetClass.cur_focus] = true;
 		HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->cursor.index++;
 		home_id_set_dialog_box_font_change();
 	}
@@ -560,6 +569,22 @@ static void clear_current_show_home_id(void)
 	memset(HomeIdSetClass.show_id[HomeIdSetClass.cur_focus], 0, sizeof(HomeIdSetClass.show_id[HomeIdSetClass.cur_focus]));
 	HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->cursor.index = 0;
 	memset(HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->font.string1, 0, 10);
+}
+
+static void home_id_set_prepare_input_replace(void)
+{
+	if (home_id_replace_on_next_input[HomeIdSetClass.cur_focus] &&
+		HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->font.string1[0] != '\0')
+	{
+		clear_current_show_home_id();
+	}
+	home_id_replace_on_next_input[HomeIdSetClass.cur_focus] = false;
+}
+
+static void home_id_set_mark_replace_on_next_input(void)
+{
+	home_id_replace_on_next_input[HomeIdSetClass.cur_focus] =
+		(HomeIdSetClass.dialog_box[HomeIdSetClass.cur_focus]->font.string1[0] != '\0');
 }
 
 /*********************************************************************************************************
@@ -809,7 +834,7 @@ static bool isSameAsOtherInputBoxNumber(void)
  * 返 回 值 : 无
  * 备    注 : 依次执行：读取历史数据→验证数值→检查重复→检查已存在→触发保存/显示确认框
  *********************************************************************************************************/
-static void set_home_id_number(void)
+static bool set_home_id_number(void)
 {
 	getTheIDAndNumBeforeInput();
 
@@ -817,29 +842,49 @@ static void set_home_id_number(void)
 
 	if (set_home_id_adjust() == false)
 	{
-		return;
+		return false;
 	}
 
 	if (isSameAsOtherInputBoxNumber() == true)
 	{
-		return;
+		return false;
 	}
 
 	if (is_set_home_id_repetition() == true)
 	{
 		LOG_WHITE("SET_STATUS_FAIL\n\r");
-		return;
+		return false;
 	}
 
 	if (home_id_exist(HomeIdSetClass.set_id[HomeIdSetClass.save_id_falg]))
 	{
 		HomeIdSetClass.layer = LAYER_DIALOG;
 		selectDialog_display();
-		return;
+		return false;
 	}
 
 	Intercom.set_id();
 	Intercom.status = INT_SET_HOME_ID;
+	return true;
+}
+
+static bool home_id_set_save_dirty_current(void)
+{
+	if (!home_id_input_dirty[HomeIdSetClass.cur_focus])
+	{
+		return true;
+	}
+
+	bool save_started = set_home_id_number();
+	if (HomeIdSetClass.layer != LAYER_MAIN ||
+		HomeIdSetClass.set_status != HOME_ID_SET_STATUS_NONE ||
+		!save_started)
+	{
+		return false;
+	}
+
+	home_id_input_dirty[HomeIdSetClass.save_id_falg] = false;
+	return true;
 }
 
 /*********************************************************************************************************
@@ -870,11 +915,12 @@ static void home_id_set_key_up_up(void)
 		if (HomeIdSetClass.set_status != HOME_ID_SET_STATUS_NONE)
 			return;
 
-		set_home_id_number();
+		if (!home_id_set_save_dirty_current())
+			return;
 		clear_prev_home_id_set_focus();
 		display_prev_home_id_set_dialog();
 		goto_prev_home_id_set_focus();
-		clear_current_show_home_id();
+		home_id_set_mark_replace_on_next_input();
 		home_id_set_input_number_display();
 		break;
 
@@ -907,13 +953,12 @@ static void home_id_set_key_down_up(void)
 		if (HomeIdSetClass.set_status != HOME_ID_SET_STATUS_NONE)
 			return;
 
-		set_home_id_number();
-		if (HomeIdSetClass.layer == LAYER_MAIN)
+		if (home_id_set_save_dirty_current())
 		{
 			clear_prev_home_id_set_focus();
 			display_prev_home_id_set_dialog();
 			goto_next_home_id_set_focus();
-			clear_current_show_home_id();
+			home_id_set_mark_replace_on_next_input();
 			home_id_set_input_number_display();
 		}
 		break;
@@ -960,13 +1005,12 @@ static void home_id_set_key_ring_up(void)
 		if (HomeIdSetClass.set_status != HOME_ID_SET_STATUS_NONE)
 			return;
 
-		set_home_id_number();
-		if (HomeIdSetClass.layer == LAYER_MAIN)
+		if (home_id_set_save_dirty_current())
 		{
 			clear_prev_home_id_set_focus();
 			display_prev_home_id_set_dialog();
 			goto_next_home_id_set_focus();
-			clear_current_show_home_id();
+			home_id_set_mark_replace_on_next_input();
 			home_id_set_input_number_display();
 		}
 		break;
@@ -992,7 +1036,7 @@ static void home_id_set_key_ring_up(void)
 		clear_prev_home_id_set_focus();
 		display_prev_home_id_set_dialog();
 		goto_next_home_id_set_focus();
-		clear_current_show_home_id();
+		home_id_set_mark_replace_on_next_input();
 		home_id_set_input_number_display();
 
 		HomeIdSetClass.layer = LAYER_MAIN;
@@ -1043,6 +1087,8 @@ void set_home_id_init(void)
 	HomeIdSetClass.set_id[HOME_ID_SET_M4_DIALOG_BOX] = 0;
 
 	memset(HomeIdSetClass.show_id, 0, sizeof(HomeIdSetClass.show_id));
+	memset(home_id_replace_on_next_input, 0, sizeof(home_id_replace_on_next_input));
+	memset(home_id_input_dirty, 0, sizeof(home_id_input_dirty));
 
 	memset(HomeIdSetClass.dialog_box[HOME_ID_SET_M1_DIALOG_BOX]->font.string1, 0, 10);
 	memset(HomeIdSetClass.dialog_box[HOME_ID_SET_M2_DIALOG_BOX]->font.string1, 0, 10);
@@ -1276,6 +1322,7 @@ static void layout_home_id_set_enter(void)
 	LOG_WHITE("dialog display \n");
 	home_id_set_dialog_display();
 	clear_current_show_home_id();
+	home_id_replace_on_next_input[HomeIdSetClass.cur_focus] = false;
 	selectDialog_init();
 	display_current_home_id_set_focus();
 }
@@ -1391,6 +1438,7 @@ static void layout_home_id_set_timer(void)
 
 				HomeIdSetClass.dialog_box[HomeIdSetClass.save_id_falg]->font.text1.font_color = 0xFFFFFFFF;
 				widget_dialog_box_display(HomeIdSetClass.dialog_box[HomeIdSetClass.save_id_falg]);
+				home_id_input_dirty[HomeIdSetClass.save_id_falg] = false;
 				LOG_WHITE("save set home id success\n");
 
 				flagMid = 0;
@@ -1435,6 +1483,8 @@ static void layout_home_id_set_timer(void)
 		for (i = 0; i < 4; i++)
 		{
 			widget_dialog_box_display(HomeIdSetClass.dialog_box[i]);
+			home_id_replace_on_next_input[i] =
+				(HomeIdSetClass.dialog_box[i]->font.string1[0] != '\0');
 		}
 		display_current_home_id_set_focus();
 	}

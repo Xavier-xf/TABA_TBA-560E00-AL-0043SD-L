@@ -130,6 +130,38 @@ cd app_cu_datin
 
 
 
+## 2026-06-03（UNIT 房号设置页输入替换和 dirty 保存）
+
+### 问题描述：
+
+UNIT 房号设置页中，M1-M4 输入框上下或确认切换焦点时，原先会清空当前对话框里的房号；调整为不清空后，又发现已经输入或保存过的房号在第二次移动经过时仍会触发保存，可能因为重复校验导致输入框变黄，用户会误以为操作异常。
+
+### 问题原因：
+
+旧逻辑在 `home_id_set_key_up_up()`、`home_id_set_key_down_up()`、`home_id_set_key_ring_up()` 切换焦点时直接清空当前输入框；改为保留显示后，按键处理仍在切换前无条件调用 `set_home_id_number()`，无法区分“已有显示值”和“本次用户刚输入的值”，因此读出来的旧房号或已经保存过的房号也会被再次保存和校验。
+
+### 解决方法：
+
+焦点切换时不再清空已有房号，只在用户开始输入数字时替换旧值；同时为 M1-M4 增加本次输入标志，只有当前输入框本次按数字输入过，切换焦点时才允许触发保存。未输入过的旧房号只显示和移动焦点，不再重复保存。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_home_id_set.c`
+- `tests/test_home_id_set_focus_replace.sh`
+
+### 具体修改：
+
+- 新增 `home_id_replace_on_next_input[]`，读房号刷新或切换到已有内容输入框后，标记下一次数字输入需要先清空旧值。
+- 新增 `home_id_set_prepare_input_replace()` 和 `home_id_set_mark_replace_on_next_input()`，实现“选择不清空，输入时替换”。
+- 新增 `home_id_input_dirty[]`，只有用户本次数字输入成功写入后才置为 dirty。
+- 新增 `home_id_set_save_dirty_current()`，上/下/OK 切换焦点时未 dirty 直接移动，dirty 才调用保存逻辑。
+- `set_home_id_number()` 从 `void` 改为 `bool`，返回是否真正发起 `Intercom.set_id()`，避免依赖旧的 `Intercom.status`。
+- 保存失败或弹出房号已存在确认框时不移动焦点；真实发起保存或保存成功后清除 dirty，避免二次路过重复保存。
+- `home_id_set_add_number()` 改为先判断 `index <= max_index` 再写 `show_id[index]`，避免满 4 位后继续按数字造成越界写入。
+- 扩展静态测试，校验焦点切换不清空、数字输入前替换、输入后置 dirty、按键保存必须经过 dirty guard。
+
+
+
 ## 2026-06-02（待机时钟、字体缓冲和删卡越界修正）
 
 ### 问题描述：

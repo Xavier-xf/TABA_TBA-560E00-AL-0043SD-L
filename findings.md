@@ -67,3 +67,15 @@
 - 删卡线程参数实际是卡片数据起始编号 `home_id * 10`，不是 `UserData.unit_number[]` 的数组下标；旧代码 `UserData.unit_number[(int)arg] = -1` 会把卡号索引当房号列表下标，典型房号如 `1001` 会写到 `10010`，超过 `unit_number[10000]`。
 - 正确删除房号的方式应按 `home_id` 在 `UserData.unit_number[]` 当前有效范围内查找，找到后前移后续项并将 `UNIT_NUMBER_INDEX` 减 1；如果找不到，不应盲目减少计数。
 - 当前 C 源多数是 CRLF 文件，普通 `git diff --check` 会把行尾 CR 报为 trailing whitespace；本轮使用 `git -c core.whitespace=cr-at-eol diff --check` 检查真实空白问题。
+
+## UNIT 房号设置页输入替换
+- `layout_home_id_set.c` 中 M1-M4 焦点切换原先在 `home_id_set_key_up_up()`、`home_id_set_key_down_up()`、`home_id_set_key_ring_up()` 里调用 `clear_current_show_home_id()`，因此用户只是上下选择到某个房号框时，旧房号会立即被清掉。
+- 用户期望是“选择不清空，输入时替换”：例如框内已有 `1`，上下选择到该框仍显示 `1`；开始输入 `22` 时先清空旧值，再显示 `2 2`。
+- 修复策略使用每个输入框独立的 `home_id_replace_on_next_input[]` 标志。读房号刷新或焦点切换到已有内容的输入框时置位；`home_id_set_add_number()` 第一次数字输入前按标志清空旧值，并立即清标志，保证连续输入 `22` 不会第二个数字再次清空第一个数字。
+- 同时修正 `home_id_set_add_number()` 的边界顺序：旧代码在判断 `index <= max_index` 前先写 `show_id[index]`，满 4 位后继续按数字有越界写风险；现在先判断再写。
+
+## UNIT 房号设置页重复保存
+- 读取旧房号后，M1-M4 输入框里有显示内容但并不代表用户本次编辑过。旧逻辑在上/下/OK 切换焦点前无条件调用 `set_home_id_number()`，因此第二次移动经过已有房号时也会走保存和重复校验，表现为无操作也可能变黄。
+- 正确语义应区分“已有显示值”和“本次输入值”：只有用户按数字键后，当前输入框才具备保存资格。
+- 修复策略使用每个输入框独立的 `home_id_input_dirty[]` 标志。数字输入成功写入后置 `true`；焦点切换时通过 `home_id_set_save_dirty_current()` 判断，未 dirty 直接移动，dirty 才调用保存逻辑。
+- `set_home_id_number()` 改为返回是否真正发起 `Intercom.set_id()`，避免依赖可能残留的 `Intercom.status` 判断；只有真实发起保存后才清除 dirty。保存失败或弹出已存在确认框时不移动焦点，保留输入状态。

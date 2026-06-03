@@ -289,3 +289,66 @@
   - 最终 APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`。
   - 包头：`# File Parttion: app.sqsh4 0 593920`。
   - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+## 2026-06-03 UNIT 房号设置页输入替换
+- 当前会话可用 skills 已包含 Superpowers 插件和 context-engineering 拆分 skills，已使用 `using-superpowers`、`brainstorming`、`test-driven-development`、`planning-with-files-zh`、`verification-before-completion`。
+- 用户要求：UNIT 界面键盘上下选择对话框时不要清除对话框里的房间号，开始输入时再清除；例如原房号 `1`，上下选择到该框不清，输入 `22` 时直接替换为 `22`。
+- 已定位到 `app_cu_datin/system/layout/layout_home_id_set.c`：
+  - 原 `home_id_set_key_up_up()` / `home_id_set_key_down_up()` / `home_id_set_key_ring_up()` 在切换到新焦点后调用 `clear_current_show_home_id()`，导致选择焦点即清空旧房号。
+  - `home_id_set_add_number()` 原先在判断最大长度前先写 `show_id[index]`，满 4 位后继续按数字存在越界写风险。
+- 已按 TDD 新增 `tests/test_home_id_set_focus_replace.sh`：
+  - RED：确认当前没有输入替换标志、焦点切换仍会清空。
+  - GREEN：实现后校验焦点切换不再调用清空函数，切换后标记“下次输入替换”，数字输入前先走替换准备逻辑。
+- 已修改 `layout_home_id_set.c`：
+  - 新增 `home_id_replace_on_next_input[HOME_ID_SET_TOTAL_DIALOG_BOX]`。
+  - 新增 `home_id_set_mark_replace_on_next_input()`：切换到已有内容的 M 输入框时，标记下次数字输入需要替换。
+  - 新增 `home_id_set_prepare_input_replace()`：数字输入前如标志存在且当前文本非空，则清空旧值并清标志。
+  - 上下键和确认键切换 M1-M4 后不再清空对话框内容。
+  - 读房号刷新 M1-M4 后，对已有内容的输入框设置替换标志。
+  - `home_id_set_add_number()` 改为先判断 `index <= max_index` 再写 `show_id[index]`。
+- 已完成验证：
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_home_id_set.c tests/test_home_id_set_focus_replace.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260603084103 && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`，包头 `# File Parttion: app.sqsh4 0 593920`。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+## 2026-06-03 UNIT 房号设置页 dirty 保存
+- 用户整机测试确认上一版“切换焦点不清空、输入时替换”没问题，但发现：如果某个位置已经输入/保存过房号，第二次上下移动经过该位置仍会触发保存，导致重复保存校验并变黄。
+- 已按用户确认方案实现“本次输入后才保存”：
+  - 新增 `home_id_input_dirty[HOME_ID_SET_TOTAL_DIALOG_BOX]`。
+  - `home_id_set_add_number()` 在数字真正写入 `show_id` 后将当前输入框置 dirty。
+  - 新增 `home_id_set_save_dirty_current()`，未 dirty 时直接允许焦点移动，不调用保存；dirty 时才调用保存。
+  - `set_home_id_number()` 从 `void` 改为 `bool`，返回是否真正发起 `Intercom.set_id()`，避免依赖旧的 `Intercom.status`。
+  - 上/下/OK 主界面按键不再直接调用 `set_home_id_number()`。
+  - 保存失败或弹出已存在确认框时不切换焦点；真实发起保存或保存成功后清除 dirty，避免二次路过重复保存。
+- 已扩展 `tests/test_home_id_set_focus_replace.sh`：
+  - 校验 `home_id_input_dirty` 和 `home_id_set_save_dirty_current` 存在。
+  - 校验数字输入会置 dirty。
+  - 校验按键处理函数不能直接调用 `set_home_id_number()`。
+  - 校验初始化和保存成功会清 dirty。
+- 已完成验证：
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_home_id_set.c tests/test_home_id_set_focus_replace.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260603100302 && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`，包头 `# File Parttion: app.sqsh4 0 593920`。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+## 2026-06-03 README 补充 UNIT 修改记录
+- 用户要求将本次 UNIT 改动按 `README.md` 既有格式写入文档。
+- 已在 `README.md` 新增 `2026-06-03（UNIT 房号设置页输入替换和 dirty 保存）`：
+  - 记录焦点切换不清空、输入时替换旧房号。
+  - 记录 `dirty` 保存策略，避免第二次移动经过旧房号时重复保存并变黄。
+  - 记录涉及文件和具体修改点。
+- 已验证：
+  - `git diff --check -- README.md` 通过。

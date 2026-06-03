@@ -161,3 +161,45 @@
      - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260602144956 && ./partition_image.sh app_resource` 通过。
      - 最终 `AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS` 只包含 `app.sqsh4`，大小 `594031 bytes`，包头 `# File Parttion: app.sqsh4 0 593920`。
      - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+18. [complete] UNIT 房号设置页切换焦点不清空旧房号
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_home_id_set.c`：M1-M4 房号输入框上下/确认切换焦点时不再清空当前对话框内容；切换到已有内容输入框后，第一次数字输入前清空旧值并用新输入替换。
+     - `tests/test_home_id_set_focus_replace.sh`：新增静态回归检查，锁定“焦点切换不清空、输入前替换”的行为。
+   - 行为说明：
+     - 读房号得到旧值或用户输入过 `1` 后，键盘上下选择到该框不会清掉显示。
+     - 在该框开始输入 `22` 时，会先清掉旧的 `1` 或旧房号，再显示 `2 2`，不会变成 `1 2 2`。
+     - 连续输入期间不会重复清空，避免第二个数字覆盖第一个数字。
+   - 验证结果：
+     - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+     - `bash tests/test_brancher_heartbeat.sh` 通过。
+     - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_home_id_set.c tests/test_home_id_set_focus_replace.sh` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；期间 `mkfs.jffs2` 在沙箱内仍打印已知“错误的系统调用”，APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+     - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`，避免 `autobuild` 后平台目录残缺。
+     - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260603084103 && ./partition_image.sh app_resource` 通过。
+     - 最终 APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`。
+     - 包头：`# File Parttion: app.sqsh4 0 593920`。
+     - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+19. [complete] UNIT 房号设置页仅本次输入后才保存
+   - 文件计划：
+     - `app_cu_datin/system/layout/layout_home_id_set.c`：为 M1-M4 增加本次输入 `dirty` 状态；上/下/OK 切换焦点时只有当前框本次输入过数字才触发保存。
+     - `tests/test_home_id_set_focus_replace.sh`：扩展静态检查，禁止按键处理函数直接调用 `set_home_id_number()`，要求通过 dirty guard 保存。
+   - 行为说明：
+     - 读出来的旧房号或已经保存过的房号，上下移动再次经过时不再重复保存，也不会因为重复校验变黄。
+     - 用户本次输入数字后，按上/下/OK 才会保存；保存成功或发起保存后清除 dirty，避免二次路过重复触发。
+     - 如果保存失败或进入“房号已存在”确认框，不切换焦点，保留输入状态给用户处理。
+   - 验证结果：
+     - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+     - `bash tests/test_brancher_heartbeat.sh` 通过。
+     - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_home_id_set.c tests/test_home_id_set_focus_replace.sh` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；期间 `mkfs.jffs2` 在沙箱内仍打印已知“错误的系统调用”，APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+     - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`，避免 `autobuild` 后平台目录残缺。
+     - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=20260603100302 && ./partition_image.sh app_resource` 通过。
+     - 最终 APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `594031 bytes`。
+     - 包头：`# File Parttion: app.sqsh4 0 593920`。
+     - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
