@@ -17,6 +17,7 @@ typedef enum
 	CARD_IDLE_MODE,					// 刷卡空闲模式：未检测到刷卡数据，等待刷卡
 	CARD_SWIPING_CARD_MODE,			// 刷卡验证模式：已接收刷卡数据，正在校验卡片合法性
 	CARD_ADD_CARD_MODE,				// 添加卡片模式：处于新增卡片的业务流程中
+	CARD_TAG_FILL_MODE,				// TAG填充模式：卡管理页刷已保存卡后填充TAG编号
 	CARD_UNLOCK_MODE,				// 解锁模式：卡片验证通过，执行开门动作的阶段
 	CARD_SWIPING_CARD_PROCESS_MODE, // 刷卡处理中模式：非法卡/验证失败后的短暂忙状态
 	CARD_ADD_CARD_PROCESS_MODE		// 添加卡片处理中模式：添加卡片成功/失败后的短暂忙状态
@@ -33,6 +34,7 @@ typedef struct
 	struct ak_timeval unlock_time; // 解锁动作的时间戳（用于控制开门时长）
 	struct ak_timeval busy_time;   // 忙状态的时间戳（用于控制忙状态时长）
 	bool success_show;			   // 标记是否需要显示添加卡片成功的文字提示
+	bool tag_fill_request;		   // 标记卡管理页当前刷卡用于填充TAG而不是新增卡
 	char string_buf[11][32];
 } STR_SwipingCardClass;
 

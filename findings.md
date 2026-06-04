@@ -79,3 +79,73 @@
 - 正确语义应区分“已有显示值”和“本次输入值”：只有用户按数字键后，当前输入框才具备保存资格。
 - 修复策略使用每个输入框独立的 `home_id_input_dirty[]` 标志。数字输入成功写入后置 `true`；焦点切换时通过 `home_id_set_save_dirty_current()` 判断，未 dirty 直接移动，dirty 才调用保存逻辑。
 - `set_home_id_number()` 改为返回是否真正发起 `Intercom.set_id()`，避免依赖可能残留的 `Intercom.status` 判断；只有真实发起保存后才清除 dirty。保存失败或弹出已存在确认框时不移动焦点，保留输入状态。
+
+## RFID 保存/删卡提示关闭后焦点位置
+- `card_manage_prompt_close()` 原先关闭提示时只清状态并重绘页面，`CardManageClass.cur_focus.main` 保持在触发操作的 `SAVE_FOCUS` 或 `ERASE_FOCUS`，所以提示关闭后箭头仍停在 `SAVE:` 或 `ERASE:`。
+- 用户的操作路径是“输入房号进入添卡模式 -> 保存/删除 -> 看提示 -> 继续下一户”，下一步通常是重新输入 `UNIT:`，因此保存/删除成功后焦点回 `UNIT:` 更符合连续操作。
+- 错误提示不应强制回 `UNIT:`，因为错误通常需要用户继续处理当前操作，强制改变焦点会增加定位成本。
+- 焦点重置应先改 `cur_focus` 状态，再调用 `card_manage_page_redraw()`；如果先按旧焦点重绘页面再单独显示 UNIT 箭头，可能留下旧 `SAVE/ERASE` 箭头残影或双箭头。
+
+## RFID TAG 单张删卡
+- 当前 `card_data` 存储的是原始刷卡 ID 字符串，格式为 `ID:` + 十六进制数据；屏幕 `TAG:` 显示的是从该原始 ID 转换出的纯数字字符串，因此手动输入 TAG 必须按屏幕显示输入，保留前导 0，例如 `0014246460`。
+- 单张删卡不需要改数据文件结构。删除时只需要把当前 UNIT 的 10 个卡槽逐个转换成显示 TAG，与输入 TAG 比较，匹配后清空对应的一个 slot 并保存 `card_data`。
+- 旧房间卡数量统计在遇到第一个空 slot 时 `break`，单删会产生中间空洞，必须改为遍历 10 个 slot 统计全部非空卡，否则后续显示数量会偏小。
+- 后续添卡不会因为中间空洞出错：`save_card_id()` 原本就是从 slot0 到 slot9 查找第一个空位，单删留下的空 slot 会被优先复用。
+- `ERASE` 在 TAG 为空或当前 UNIT 下找不到该 TAG 时不能再整户删除；否则用户只是忘记输入 TAG 就可能删掉整户卡。当前策略是只提示错误。
+- 刷卡填充 TAG 必须限定在当前 UNIT 内匹配。卡存在但属于其他 UNIT 时不填充、不删除，提示错误，避免跨户误删。
+
+## RFID TAG 与 UNIT 同级交互
+- 当前代码已经有 TAG 单删基础，但手动 TAG 输入、`*` 删除 TAG 和刷卡填充 TAG 都依赖 `CARD_MANAGE_MAIN_LAYER_CONFIRM`，等价于必须先确认 `UNIT:` 后才能操作 `TAG:`。
+- 用户期望 `TAG:` 与 `UNIT:` 同级，因此 TAG 输入和刷卡填充应在 `CARD_MANAGE_MAIN_LAYER` 也生效，焦点停在 `TAG_FOCUS` 即可接收数字键和刷卡。
+- 当前 `card_manage_tag_input_display()` 使用 `{{160, 71}, {280, 40}}`，右边界到 `x=440`；选择箭头位置为 `{{430, ...}, {32, 32}}`，因此 TAG 输入或清除区域会覆盖最右侧箭头。
+- 推荐把 TAG 文本显示/清除区域收窄到右边界小于 `x=430`，例如 `{{160, 71}, {250, 40}}` 或更稳妥的 `{{160, 71}, {240, 40}}`。
+- 为了满足“TAG 输完后在 TAG 项按确认，然后 ERASE 才能删”的语义，建议新增 `tag_confirmed` 状态：TAG 输入或删除后清 false；TAG 焦点按确认且 TAG 非空时置 true；ERASE 只有在 UNIT 有效、TAG 有值且 tag_confirmed 为 true 时执行单删。
+- 不推荐在未输入 UNIT 时仅凭 TAG 全局删除，因为相同或异常转换 TAG 的误删风险更高，也会让用户无法确认删除归属户；推荐仍要求 UNIT 有效。
+- 实现时对刷卡填充做了额外保护：`CARD_IDLE_MODE` 下如果 `SwipingCard.tag_fill_request` 为真，刷卡只填充 TAG，不进入普通开门验证；这样 TAG 主层刷卡不会误触发开门或非法卡报警流程。
+- TAG 填充从“必须当前 UNIT 下找到该卡”放宽为“能从原始卡 ID 转换出屏幕 TAG 数字即可填充”，删除时仍限定当前 UNIT 匹配；这样支持先刷卡填 TAG、再输入 UNIT、确认 TAG、ERASE 删除。
+- TAG 显示/清理区域右边界从 `x=440` 收到 `x=400`，给 `x=430,w=32` 的焦点箭头留出完整空间。
+
+## RFID 删除路径和 TAG 提示
+- 短房号显示重叠的直接原因是 `card_manage_prepare_unit_for_card_action()` 在删除前复用了 `card_manage_home_id_adjust()`，把输入 `9` 内部右对齐为 `0009` 后又调用 `card_manage_dialog_box_font_change()` 和 `widget_show.dialog_box()` 重画；原 `9` 区域未被可靠清干净，因此和第一个 `0` 重叠。
+- 房号右对齐本身是旧逻辑，用于让输入 `9` 按房号 `0009/9` 计算，而不是 `9000`。正确修复不是取消内部右对齐，而是避免把内部补齐值重新画到输入框。
+- RFID 页整户删除不可用的原因是单张删卡实现替换了旧 `delete_current_card()` 路径，只保留 `delete_single_card_by_tag()`；因此 TAG 为空时没有整户删除分支。
+- 兼容策略调整为：`ERASE:` 时 TAG 为空表示整户删除；TAG 有值表示单张删除，且必须先在 `TAG:` 上确认。
+- 错误文案必须按失败对象区分：UNIT 无效使用 `Room number error`，TAG 未确认或当前 UNIT 下找不到该 TAG 使用 `Card number error`。
+- 旧方案曾考虑 TAG 确认后显示 `TAG confirmed` 弹窗；该方案已废弃，原因是会打断 RFID 主界面操作流，且用户反馈观感奇怪。
+
+## RFID TAG 确认去弹窗和 ERASE 文案区分
+- `TAG confirmed` 弹窗不适合作为确认反馈：它会进入提示框关闭流程，打断 RFID 主界面操作，并且容易让用户误以为出现异常提示。
+- 更稳妥的反馈是让 `ERASE` 行承载当前动作语义：TAG 未确认或无 TAG 时显示 `ERASE ROOM`，TAG 确认并匹配后显示 `ERASE TAG`。
+- TAG 确认流程需要复用 UNIT 确认的数据刷新，但不应先校验当前手动 UNIT；正确流程是先用 TAG 在全局已保存卡数据中反查卡槽，再用卡槽编号计算房号并补全 UNIT，最后刷新该房号的卡数量。
+- 单删错误必须和房号错误分开：UNIT 无效才显示 `Room number error`；TAG 未确认、TAG 为空但执行单删语义、或当前 UNIT 下找不到该 TAG，应显示 `Card number error`。
+- 删除兼容策略最终定为：TAG 为空时 `ERASE` 删除当前 UNIT 整户；TAG 有值时必须先在 `TAG` 项确认，确认成功后 `ERASE` 按 TAG 反查到的已保存卡槽删除单张卡。
+
+## RFID TAG 反查房号单删修正
+- 用户实测发现 TAG 焦点刷卡填充后按确认仍显示 `Room number error`，根因是旧确认路径先调用 `card_manage_prepare_unit_for_card_action()`，即使 TAG 正确也会因为 UNIT 未输入或状态不满足而走房号错误。
+- TAG 与 UNIT 同级后，TAG 确认应具备独立入口：通过 `card_manage_find_saved_card_by_tag()` 全局遍历已保存卡槽，找到卡后用 `card_index / 10` 得到房号，再调用 `card_manage_set_unit_by_home_id()` 回填 UNIT 显示。
+- 刷卡填充 TAG 时不能只把原始卡 ID 转成显示数字就算成功；必须先用 `card_manage_find_saved_card_by_raw_id()` 确认该卡已保存。未保存卡刷入 TAG 焦点时显示 `Card number error`，并播放错误提示。
+- `ERASE TAG` 删除不应再重新校验当前 UNIT 输入框；它应使用已确认 TAG 反查出的卡槽房号作为删除基准，避免 UNIT 输入框状态导致单删误报房号错误。
+- 用户重新确认 UNIT 时，应清掉 TAG 和 TAG confirmed 状态，回到 `ERASE ROOM` 整户删除模式，避免上一张 TAG 的单删状态残留。
+- `ERASE ROOM` 文本比旧 `ERASE:` 长，原 `{{33, 114}, {125, 40}}` 显示区域不足；需要加宽到 `200` 左右，避免显示不全。
+
+## RFID UNIT 房间操作与 TAG 单删入口互斥
+- 确认 `UNIT` 后系统语义已经进入房间操作/添卡模式，此时焦点移动到 `TAG` 只应是浏览当前卡号显示行，不应继续作为单张删卡入口。
+- 原刷卡状态机在 `CARD_ADD_CARD_MODE` 下只要 `CardManageClass.cur_focus.main == TAG_FOCUS` 就会调用 `card_manage_fill_tag_by_card_id()`；这会让已保存卡在房间操作模式下刷卡被判定为 TAG 删除准备成功，覆盖原本“已添加卡应提示错误”的添卡语义。
+- 正确边界是通过显式状态区分：`UNIT` 路径进入 `card_manage_room_operation_active`，此时禁用 TAG 键盘输入、退格和刷卡填充；`TAG` 路径只能在 RFID 主层、未确认 UNIT、焦点在 TAG 时启用。
+- TAG 单删准备成功只是“选中了要删除的卡”，不是新增卡成功，也不是开门成功，因此不应播放成功音；只有卡不存在或卡号错误时播放错误音并显示 `Card number error`。
+- TAG 反查补全 UNIT 时内部仍需保持右对齐后的真实房号数组用于计算，但显示层应按直接输入格式显示：房号 `9` 显示 `9`，不是 `0009`；四位房号显示为带空格的输入格式，例如 `1 0 0 1`。
+- 提示框显示期间也应刷新 `SwipingCard.tag_fill_request`，避免错误提示还在屏幕上时继续刷卡被当作 TAG 填充。
+
+## RFID 未保存退出后的 TAG/SAVE 残留
+- 用户实测补充：如果在 `UNIT` 房间操作中执行 `SAVE`，保存成功提示关闭会走已有结果清理流程，所以不会复现；如果确认 `UNIT` 后没有保存就直接返回，再进入 `TAG` 输入错误卡号，错误弹窗关闭后会重画上一次 `UNIT` 路径留下的旧 `SAVE` 数量和旧 `TAG` 卡号。
+- 根因是未保存返回只走 `CARD_MANAGE_MAIN_LAYER_CONFIRM` 的 `*` 返回路径，没有统一清理 `CardManageClass.room_card_info.room_card_num`、`SwipingCard.string_buf[10]`、`SwipingCard.success_show` 和 `card_manage_tag_input` 这些临时结果缓存。
+- `card_manage_prompt_close()` 关闭 TAG 错误提示时会重绘页面；如果这些临时缓存仍保留，就会在清掉弹窗后把旧 `SAVE:0` 或旧刷卡 TAG 再画出来。
+- 正确边界是：只有仍处于真实 `CARD_ADD_CARD_MODE` 且 `card_manage_room_operation_active` 的添卡流程，才允许关闭普通提示后重画当前刷卡结果；TAG 错误提示和未保存退出路径都必须清 transient 结果状态。
+- 修复策略使用统一清理函数清掉临时 TAG/SAVE/刷卡缓存；未保存按 `*` 从确认层返回时额外回到 `UNIT_FOCUS`、`CARD_MANAGE_MAIN_LAYER`、`CARD_IDLE_MODE`，并清空房号输入框，避免旧房间操作状态污染后续 TAG 单删入口。
+
+## RFID TAG 刷卡失败按键音和 UNIT 刷卡删除语义
+- 主界面 `TAG` 焦点刷入未保存卡时，提示框显示会刷新 `SwipingCard.tag_fill_request`；旧 `CARD_TAG_FILL_MODE` 结束时如果继续依赖 `tag_fill_request` 判断返回模式，就可能错误回到 `CARD_ADD_CARD_MODE`。
+- `user_main.c` 在 `SwipingCard.mode == CARD_ADD_CARD_MODE` 时会抑制普通按键音，因此 TAG 刷卡失败后错误回到添卡模式，会表现为提示消失后按键音消失。
+- 正确返回依据不是 `tag_fill_request`，而是当前 RFID 页面层级：主层 TAG 填充失败/结束后回 `CARD_IDLE_MODE`；确认层房间操作中的刷卡处理结束后才回 `CARD_ADD_CARD_MODE`。
+- UNIT 房间操作里的刷卡结果只是当前刷卡显示和添卡反馈，不应写入 `card_manage_tag_input` 或清理 TAG 单删输入；否则 `ERASE` 会因为 TAG 输入缓存有值而从整户删除语义切到单张删除语义。
+- 修复边界是把“刷卡结果显示”和“TAG 单删输入状态”拆开：`room_card_string_buf_display()` 只调用只读显示函数，`card_manage_card_result_display()` 只把原始卡 ID 转成屏幕数字并绘制，不修改 TAG 输入/确认状态。

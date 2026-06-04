@@ -216,6 +216,16 @@ void swiping_card_event_detect(int card_fd_serial)
 		{
 			standby_timer_reset();
 			swiping_card_data_convert_string(data_buf, string_buf, length);
+			if (SwipingCard.tag_fill_request)
+			{
+				if (!card_manage_fill_tag_by_card_id(string_buf))
+				{
+					warn_sound_play();
+				}
+				ak_get_ostime(&SwipingCard.busy_time);
+				SwipingCard.mode = CARD_TAG_FILL_MODE;
+				break;
+			}
 			SwipingCard.mode = CARD_SWIPING_CARD_MODE;
 		}
 		break;
@@ -244,6 +254,16 @@ void swiping_card_event_detect(int card_fd_serial)
 		{
 			standby_timer_reset();
 			swiping_card_data_convert_string(data_buf, string_buf, length);
+			if (SwipingCard.tag_fill_request)
+			{
+				if (!card_manage_fill_tag_by_card_id(string_buf))
+				{
+					warn_sound_play();
+				}
+				ak_get_ostime(&SwipingCard.busy_time);
+				SwipingCard.mode = CARD_TAG_FILL_MODE;
+				break;
+			}
 			if (validity_check_card(string_buf) == true || validity_check_temp_card(string_buf) == true)
 			{
 				warn_sound_play();
@@ -285,6 +305,15 @@ void swiping_card_event_detect(int card_fd_serial)
 			SwipingCard.mode = CARD_IDLE_MODE;
 		}
 		break;
+	case CARD_TAG_FILL_MODE:
+		ak_get_ostime(&cur_cpu_time);
+		if (ak_diff_ms_time(&cur_cpu_time, &SwipingCard.busy_time) >= 300)
+		{
+			SwipingCard.mode = (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER)
+								   ? CARD_IDLE_MODE
+								   : CARD_ADD_CARD_MODE;
+		}
+		break;
 	case CARD_ADD_CARD_PROCESS_MODE:
 		ak_get_ostime(&cur_cpu_time);
 		if (ak_diff_ms_time(&cur_cpu_time, &SwipingCard.busy_time) >= 500)
@@ -299,5 +328,6 @@ STR_SwipingCardClass SwipingCard = {
 	CARD_IDLE_MODE,
 	{0},
 	{0},
+	false,
 	false,
 	{{0}}};

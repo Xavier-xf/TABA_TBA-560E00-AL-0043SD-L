@@ -71,6 +71,8 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"UNIT:", "واحد"},
 		{"TAG:", "تگ"},
 		{"ERASE:", "پاک کردن "},
+		{"ERASE ROOM", "حذف اتاق"},
+		{"ERASE TAG", "حذف کارت"},
 		{"SAVE:", "ذخیره"},
 		// layout card number font
 		{"Please enter room number", "لطفا شماره اتاق را وارد کنید"},
@@ -78,6 +80,7 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Add card success", "کارت اضافه شد"},
 		{"Delete card success", "کارت حذف شد"},
 		{"Room number error", "شماره اتاق وجود ندارد"},
+		{"Card number error", "شماره کارت وجود ندارد"},
 		// layout swiping number font
 		{"Please put your card in the card section", "لطفا کارت را در قسمت کارتخوانی قرار دهید"},
 		{"Add Success !", "کارت اضافه شد"},

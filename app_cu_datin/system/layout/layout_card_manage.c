@@ -4,17 +4,60 @@
 #include "user_data.h"
 #include "string.h"
 #include "ak_thread.h"
+#include "leo_audio_play.h"
 
 #define CARD_MANAGE_PROMPT_TIMEOUT_TICKS 67
 #define CARD_PROMPT_ERROR_COLOR 0xFFFF0000
 #define CARD_PROMPT_SUCCESS_COLOR 0xFFFFFFFF
+#define CARD_MANAGE_TAG_INPUT_MAX 10
 
 static ak_pthread_t thread_delete_card;
 static ak_pthread_t thread_save_card;
+static char card_manage_tag_input[CARD_MANAGE_TAG_INPUT_MAX + 1];
+static char card_manage_delete_tag[CARD_MANAGE_TAG_INPUT_MAX + 1];
+static int card_manage_tag_input_index;
+static bool card_manage_tag_confirmed;
+static bool card_manage_tag_replace_on_next_input;
+static bool card_manage_room_operation_active;
 
 static void *delete_current_card(void *arg);
+static void *delete_single_card_by_tag(void *arg);
+static int calculateHomeId(void);
+static void card_manage_prompt_show(CARD_MANAGE_STATUS status);
+static void card_manage_dialog_box_init(CARD_MANAGE_STATUS status_param);
 static void room_card_numbe_display(void);
 static void room_card_string_buf_display(void);
+static int get_room_card_number_by_room_num(int room_num);
+static void display_current_card_manage_focus(void);
+static void Erase_font_display(void);
+static void card_manage_update_tag_fill_request(void);
+static void card_manage_dialog_box_font_change(void);
+
+static void card_manage_enter_room_operation(void)
+{
+	card_manage_room_operation_active = true;
+	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM;
+	SwipingCard.tag_fill_request = false;
+}
+
+static void card_manage_leave_room_operation(void)
+{
+	card_manage_room_operation_active = false;
+}
+
+static bool card_manage_tag_entry_enabled(void)
+{
+	return CardManageClass.cur_focus.status == CARD_MANAGE_STATUS_NONE &&
+		   CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER &&
+		   CardManageClass.cur_focus.main == TAG_FOCUS &&
+		   !card_manage_room_operation_active;
+}
+
+static void card_manage_prompt_tag_error(void)
+{
+	warn_sound_play();
+	card_manage_prompt_show(CARD_MANAGE_STATUS_TAG_ERROR);
+}
 
 // ========== 焦点-坐标映射表 ==========
 const FocusPosMap card_manage_error_pos_map[] = {
@@ -111,21 +154,298 @@ static void card_manage_prompt_display(STRING_ID str_id, unsigned int prompt_col
 	text_display(&prompt, font_str(str_id));
 }
 
+static int card_manage_hex_value(char hex_char)
+{
+	if (hex_char >= '0' && hex_char <= '9')
+	{
+		return hex_char - '0';
+	}
+	if (hex_char >= 'a' && hex_char <= 'f')
+	{
+		return hex_char - 'a' + 10;
+	}
+	if (hex_char >= 'A' && hex_char <= 'F')
+	{
+		return hex_char - 'A' + 10;
+	}
+	return -1;
+}
+
+static bool card_manage_raw_id_to_tag_digits(const char *src_str, char *target_num, int target_size)
+{
+	if (src_str == NULL || target_num == NULL || target_size <= 0)
+	{
+		return false;
+	}
+
+	target_num[0] = '\0';
+	if (strncmp(src_str, "ID:", 3) == 0)
+	{
+		src_str += 3;
+	}
+
+	int trim_len = strlen(src_str);
+	int hex_len = (trim_len > 4) ? (trim_len - 4) : trim_len;
+	int target_idx = 0;
+
+	for (int i = 0; i < hex_len && (i + 1) < hex_len && target_idx < target_size - 1; i += 2)
+	{
+		int val1 = card_manage_hex_value(src_str[i]);
+		int val2 = card_manage_hex_value(src_str[i + 1]);
+		if (val1 < 0 || val2 < 0)
+		{
+			continue;
+		}
+
+		unsigned char ascii_code = (val1 << 4) | val2;
+		if (ascii_code >= '0' && ascii_code <= '9')
+		{
+			target_num[target_idx++] = ascii_code;
+		}
+	}
+	target_num[target_idx] = '\0';
+
+	return target_idx > 0;
+}
+
+static bool card_manage_tag_has_value(void)
+{
+	return card_manage_tag_input_index > 0 && strlen(card_manage_tag_input) > 0;
+}
+
+static void card_manage_tag_input_display(void)
+{
+	position pos = {{160, 71}, {240, 40}};
+	text tag_text;
+
+	text_init(&tag_text, &pos, 26);
+	tag_text.align = LEFT_MIDDLE;
+	gui_erase(&pos, 0x00);
+	text_display(&tag_text, card_manage_tag_input);
+}
+
+static void card_manage_card_result_display(const char *card_id)
+{
+	position pos = {{160, 71}, {240, 40}};
+	text tag_text;
+	char target_num[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+
+	text_init(&tag_text, &pos, 26);
+	tag_text.align = LEFT_MIDDLE;
+	gui_erase(&pos, 0x00);
+	if (card_manage_raw_id_to_tag_digits(card_id, target_num, sizeof(target_num)))
+	{
+		text_display(&tag_text, target_num);
+	}
+}
+
+static void card_manage_tag_input_clear(void)
+{
+	card_manage_tag_confirmed = false;
+	card_manage_tag_replace_on_next_input = false;
+	memset(card_manage_tag_input, 0, sizeof(card_manage_tag_input));
+	card_manage_tag_input_index = 0;
+	card_manage_tag_input_display();
+	Erase_font_display();
+}
+
+static void card_manage_tag_input_set(const char *tag_digits)
+{
+	card_manage_tag_confirmed = false;
+	card_manage_tag_replace_on_next_input = true;
+	memset(card_manage_tag_input, 0, sizeof(card_manage_tag_input));
+	if (tag_digits != NULL)
+	{
+		strncpy(card_manage_tag_input, tag_digits, CARD_MANAGE_TAG_INPUT_MAX);
+	}
+	card_manage_tag_input_index = strlen(card_manage_tag_input);
+	card_manage_tag_input_display();
+	Erase_font_display();
+}
+
+static void card_manage_tag_input_add_number(unsigned char number)
+{
+	card_manage_tag_confirmed = false;
+	if (card_manage_tag_replace_on_next_input)
+	{
+		memset(card_manage_tag_input, 0, sizeof(card_manage_tag_input));
+		card_manage_tag_input_index = 0;
+		card_manage_tag_replace_on_next_input = false;
+	}
+
+	if (card_manage_tag_input_index >= CARD_MANAGE_TAG_INPUT_MAX)
+	{
+		return;
+	}
+
+	card_manage_tag_input[card_manage_tag_input_index++] = '0' + number;
+	card_manage_tag_input[card_manage_tag_input_index] = '\0';
+	card_manage_tag_input_display();
+	Erase_font_display();
+}
+
+static void card_manage_tag_input_sub_number(void)
+{
+	card_manage_tag_confirmed = false;
+	card_manage_tag_replace_on_next_input = false;
+	if (card_manage_tag_input_index <= 0)
+	{
+		return;
+	}
+
+	card_manage_tag_input[--card_manage_tag_input_index] = '\0';
+	card_manage_tag_input_display();
+	Erase_font_display();
+}
+
+static int card_manage_find_saved_card_by_tag(const char *tag_digits)
+{
+	char stored_tag[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+
+	if (tag_digits == NULL || strlen(tag_digits) == 0)
+	{
+		return -1;
+	}
+
+	for (int i = 0; i < USER_CARD_TOTAL; i++)
+	{
+		char *card_id = get_card_id_data(i);
+		if (strlen(card_id) == 0)
+		{
+			continue;
+		}
+		if (card_manage_raw_id_to_tag_digits(card_id, stored_tag, sizeof(stored_tag)) &&
+			strcmp(stored_tag, tag_digits) == 0)
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+static int card_manage_find_saved_card_by_raw_id(const char *card_id)
+{
+	if (card_id == NULL || strlen(card_id) == 0)
+	{
+		return -1;
+	}
+
+	for (int i = 0; i < USER_CARD_TOTAL; i++)
+	{
+		if (strcmp(card_id, get_card_id_data(i)) == 0)
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+static void card_manage_format_unit_display(char *unit_string)
+{
+	char display_string[16] = {0};
+	int len;
+	int index = 0;
+
+	if (unit_string == NULL)
+	{
+		return;
+	}
+
+	len = strlen(unit_string);
+	for (int i = 0; i < len && index < (int)sizeof(display_string) - 1; i++)
+	{
+		if (i > 0 && index < (int)sizeof(display_string) - 1)
+		{
+			display_string[index++] = ' ';
+		}
+		display_string[index++] = unit_string[i];
+	}
+
+	memset(unit_string, 0, CARD_MANAGE_TAG_INPUT_MAX + 1);
+	strncpy(unit_string, display_string, CARD_MANAGE_TAG_INPUT_MAX);
+}
+
+static void card_manage_set_unit_by_home_id(int home_id)
+{
+	char unit_string[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+
+	if (home_id <= 0 || home_id >= USER_CARD_TOTAL / 10)
+	{
+		return;
+	}
+
+	CardManageClass.room_card_info.home_id[0] = home_id / 1000;
+	CardManageClass.room_card_info.home_id[1] = (home_id / 100) % 10;
+	CardManageClass.room_card_info.home_id[2] = (home_id / 10) % 10;
+	CardManageClass.room_card_info.home_id[3] = home_id % 10;
+	CardManageClass.dialog_box->cursor.index = CardManageClass.dialog_box->cursor.max_index + 1;
+	sprintf(unit_string, "%d", home_id);
+	card_manage_format_unit_display(unit_string);
+	memset(CardManageClass.dialog_box->font.string1, 0, 10);
+	strncpy(CardManageClass.dialog_box->font.string1, unit_string, 9);
+	gui_erase(&CardManageClass.dialog_box->box.pos, 0x00);
+	CardManageClass.widget_show.dialog_box();
+}
+
+bool card_manage_fill_tag_by_card_id(char *card_id)
+{
+	char tag_digits[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+
+	if (card_manage_find_saved_card_by_raw_id(card_id) < 0 ||
+		!card_manage_raw_id_to_tag_digits(card_id, tag_digits, sizeof(tag_digits)))
+	{
+		card_manage_tag_input_clear();
+		card_manage_prompt_show(CARD_MANAGE_STATUS_TAG_ERROR);
+		return false;
+	}
+
+	card_manage_tag_input_set(tag_digits);
+	return true;
+}
+
 static void card_manage_result_text_clear(void)
 {
-	position tag_pos = {{160, 71}, {280, 40}};
+	position tag_pos = {{160, 71}, {240, 40}};
 	position save_pos = {{160, 157}, {160, 40}};
 
 	gui_erase(&tag_pos, 0x00000000);
 	gui_erase(&save_pos, 0x00000000);
 }
 
-static void card_manage_success_result_clear(void)
+static void card_manage_clear_transient_result_state(void)
 {
 	CardManageClass.room_card_info.room_card_num = 0;
 	memset(SwipingCard.string_buf[10], 0, sizeof(SwipingCard.string_buf[10]));
 	SwipingCard.success_show = false;
+	memset(card_manage_tag_input, 0, sizeof(card_manage_tag_input));
+	card_manage_tag_input_index = 0;
+	card_manage_tag_confirmed = false;
+	card_manage_tag_replace_on_next_input = false;
 	card_manage_result_text_clear();
+}
+
+static void card_manage_success_result_clear(void)
+{
+	card_manage_clear_transient_result_state();
+}
+
+static void card_manage_reset_main_input_state(void)
+{
+	position unit_pos = {{160, 28}, {160, 40}};
+
+	SwipingCard.mode = CARD_IDLE_MODE;
+	SwipingCard.tag_fill_request = false;
+	card_manage_leave_room_operation();
+	CardManageClass.cur_focus.main = UNIT_FOCUS;
+	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
+	CardManageClass.room_card_info.card_number_status_count = 0;
+	memset(CardManageClass.room_card_info.home_id, 0, sizeof(CardManageClass.room_card_info.home_id));
+	CardManageClass.dialog_box->cursor.index = 0;
+	memset(CardManageClass.dialog_box->font.string1, 0, 10);
+	gui_erase(&unit_pos, 0x00000000);
+	card_manage_clear_transient_result_state();
 }
 
 static void card_manage_page_redraw(void)
@@ -139,8 +459,20 @@ static void card_manage_page_redraw(void)
 	CardManageClass.widget_show.dialog_box();
 }
 
+static void card_manage_focus_reset_to_unit(void)
+{
+	card_manage_leave_room_operation();
+	CardManageClass.cur_focus.main = UNIT_FOCUS;
+	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
+}
+
 static void card_manage_prompt_close(void)
 {
+	CARD_MANAGE_STATUS closing_status = CardManageClass.cur_focus.status;
+	bool keep_add_result = (SwipingCard.mode == CARD_ADD_CARD_MODE &&
+							closing_status != CARD_MANAGE_STATUS_TAG_ERROR &&
+							card_manage_room_operation_active);
+
 	if (CardManageClass.cur_focus.status == CARD_MANAGE_STATUS_NONE)
 	{
 		return;
@@ -148,16 +480,22 @@ static void card_manage_prompt_close(void)
 
 	CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_NONE;
 	CardManageClass.room_card_info.card_number_status_count = 0;
+	if (closing_status == CARD_MANAGE_STATUS_DELETE_CARD ||
+		closing_status == CARD_MANAGE_STATUS_SAVE_CARD)
+	{
+		card_manage_focus_reset_to_unit();
+	}
+	if (!keep_add_result)
+	{
+		card_manage_success_result_clear();
+	}
+	card_manage_update_tag_fill_request();
 	card_manage_page_redraw();
 
-	if (SwipingCard.mode == CARD_ADD_CARD_MODE)
+	if (keep_add_result)
 	{
 		room_card_numbe_display();
 		room_card_string_buf_display();
-	}
-	else
-	{
-		card_manage_success_result_clear();
 	}
 }
 
@@ -176,6 +514,7 @@ static void card_manage_prompt_show(CARD_MANAGE_STATUS status)
 {
 	CardManageClass.cur_focus.status = status;
 	CardManageClass.room_card_info.card_number_status_count = 0;
+	card_manage_update_tag_fill_request();
 
 	switch (status)
 	{
@@ -190,6 +529,9 @@ static void card_manage_prompt_show(CARD_MANAGE_STATUS status)
 		break;
 	case CARD_MANAGE_STATUS_SUCCESS:
 		card_manage_prompt_display(STR_CARD_NUMBER_SUCCESS, CARD_PROMPT_SUCCESS_COLOR);
+		break;
+	case CARD_MANAGE_STATUS_TAG_ERROR:
+		card_manage_prompt_display(STR_CARD_NUMBER_TAG_ERROR, CARD_PROMPT_ERROR_COLOR);
 		break;
 	default:
 		break;
@@ -209,72 +551,8 @@ static void room_card_numbe_display(void)
 }
 static void room_card_string_buf_display(void)
 {
-	position pos = {{160, 71}, {280, 40}};
-	text system_set;
-	char string[32] = {0}; // 初始化缓冲区，避免垃圾数据
-	text_init(&system_set, &pos, 26);
-	system_set.align = LEFT_MIDDLE;
-	gui_erase(&pos, 0x00);
-
 	LOG_WHITE("string_buf: %s\n", SwipingCard.string_buf[10]);
-
-	char *src_str = SwipingCard.string_buf[10];
-	char *left_trim_str = src_str + 3;
-	int trim_len = strlen(left_trim_str);
-	char hex_str[32] = {0};	   // 存储裁剪后的纯十六进制字符串
-	char target_num[32] = {0}; // 存储最终的数字字符串
-
-	//  得到纯十六进制字符串
-	if (trim_len > 2)
-	{
-		strncpy(hex_str, left_trim_str, trim_len - 4);
-	}
-	else
-	{
-		strncpy(hex_str, left_trim_str, sizeof(hex_str) - 1);
-	}
-
-	LOG_WHITE("trimmed hex string_buf: %s\n", hex_str);
-
-	// 逐两位解析十六进制字符串，转为数字字符并拼接
-	int hex_len = strlen(hex_str);
-	int target_idx = 0; // 目标数字字符串的索引
-
-	// 遍历hex_str，每两个字符为一组处理
-	for (int i = 0; i < hex_len && (i + 1) < hex_len; i += 2)
-	{
-		// 将两位十六进制字符转为对应的十六进制数值
-		char hex_char1 = hex_str[i];
-		char hex_char2 = hex_str[i + 1];
-		// 十六进制字符转数值
-		int val1 = (hex_char1 >= '0' && hex_char1 <= '9') ? (hex_char1 - '0') : (hex_char1 - 'A' + 10);
-		int val2 = (hex_char2 >= '0' && hex_char2 <= '9') ? (hex_char2 - '0') : (hex_char2 - 'A' + 10);
-		// 组合成两位十六进制数值
-		unsigned char ascii_code = (val1 << 4) | val2;
-
-		// 将ASCII码转为对应的数字字符
-		if (ascii_code >= '0' && ascii_code <= '9')
-		{
-			target_num[target_idx++] = ascii_code; // 拼接数字字符到target_num
-		}
-	}
-
-	LOG_WHITE("最终拼接的数字字符串: %s\n", target_num);
-
-	//  两种显示方式
-	// 直接显示完整数字字符串
-	sprintf(string, "%s", target_num);
-
-	// 去掉前导0，显示14206993
-	//  char *no_prefix_zero = target_num;
-	//  while (*no_prefix_zero == '0' && *(no_prefix_zero + 1) != '\0')
-	//  {
-	//      no_prefix_zero++;
-	//  }
-	//  sprintf(string, "%s", no_prefix_zero);
-
-	LOG_WHITE("decimal value string: %s\n", string);
-	text_display(&system_set, string);
+	card_manage_card_result_display(SwipingCard.string_buf[10]);
 }
 static void card_manage_icon_display(void)
 {
@@ -302,12 +580,14 @@ static void Tag_font_display(void)
 
 static void Erase_font_display(void)
 {
-	position pos = {{33, 114}, {120, 40}};
+	position pos = {{33, 114}, {200, 40}};
 	text password_set;
 
-	text_init(&password_set, &pos, 26);
+	text_init(&password_set, &pos, 22);
 	password_set.align = LEFT_TOP;
-	text_display(&password_set, font_str(STR_CARD_MANAGE_ERASE));
+	gui_erase(&pos, 0x00);
+	text_display(&password_set,
+				 font_str(card_manage_tag_confirmed ? STR_CARD_MANAGE_ERASE_TAG : STR_CARD_MANAGE_ERASE_ROOM));
 }
 
 static void Save_font_display(void)
@@ -351,6 +631,11 @@ static void card_manage_focus_display(void)
 {
 	clear_prev_card_manage_focus();
 	display_current_card_manage_focus();
+}
+
+static void card_manage_update_tag_fill_request(void)
+{
+	SwipingCard.tag_fill_request = card_manage_tag_entry_enabled();
 }
 
 static void card_mange_dialog_box_init(void)
@@ -450,6 +735,11 @@ static void card_manage_input_add_number(unsigned char number)
 {
 	if (card_manage_prompt_consume_key())
 		return;
+	if (card_manage_tag_entry_enabled())
+	{
+		card_manage_tag_input_add_number(number);
+		return;
+	}
 	if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER_CONFIRM)
 	{
 		return;
@@ -475,6 +765,11 @@ static void card_manage_input_sub_number(void)
 {
 	if (card_manage_prompt_consume_key())
 		return;
+	if (card_manage_tag_entry_enabled())
+	{
+		card_manage_tag_input_sub_number();
+		return;
+	}
 	if (CardManageClass.dialog_box->cursor.index <= 0 || CardManageClass.cur_focus.main != UNIT_FOCUS)
 	{
 		return;
@@ -515,6 +810,90 @@ static bool validity_check_unit_number(void)
 		return true;
 	}
 	return false;
+}
+
+static bool card_manage_prepare_unit_for_card_action(void)
+{
+	if (CardManageClass.dialog_box->cursor.index == 0)
+	{
+		return false;
+	}
+
+	if (CardManageClass.dialog_box->cursor.index <= CardManageClass.dialog_box->cursor.max_index)
+	{
+		card_manage_home_id_adjust();
+		CardManageClass.dialog_box->cursor.index = CardManageClass.dialog_box->cursor.max_index + 1;
+	}
+
+	return validity_check_unit_number();
+}
+
+static bool card_manage_try_delete_confirmed_tag(void)
+{
+	if (!card_manage_tag_has_value())
+	{
+		if (!card_manage_prepare_unit_for_card_action())
+		{
+			card_manage_prompt_show(CARD_MANAGE_STATUS_ERROR);
+			return false;
+		}
+
+		SwipingCard.mode = CARD_IDLE_MODE;
+		ak_thread_create(&thread_delete_card, delete_current_card,
+						 (void *)(calculateHomeId() * 10), ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
+		card_manage_dialog_box_init(CARD_MANAGE_STATUS_DELETE_CARD);
+		return true;
+	}
+
+	int card_index = card_manage_find_saved_card_by_tag(card_manage_tag_input);
+	if (!card_manage_tag_confirmed || card_index < 0)
+	{
+		card_manage_prompt_tag_error();
+		return false;
+	}
+
+	SwipingCard.mode = CARD_IDLE_MODE;
+	memset(card_manage_delete_tag, 0, sizeof(card_manage_delete_tag));
+	strncpy(card_manage_delete_tag, card_manage_tag_input, CARD_MANAGE_TAG_INPUT_MAX);
+	ak_thread_create(&thread_delete_card, delete_single_card_by_tag,
+					 (void *)((card_index / 10) * 10), ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
+	card_manage_dialog_box_init(CARD_MANAGE_STATUS_DELETE_CARD);
+	return true;
+}
+
+static bool card_manage_confirm_tag_for_delete(void)
+{
+	int card_index;
+	int home_id;
+	char stored_tag[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+
+	if (!card_manage_tag_has_value())
+	{
+		card_manage_prompt_tag_error();
+		return false;
+	}
+
+	card_index = card_manage_find_saved_card_by_tag(card_manage_tag_input);
+	if (card_index < 0)
+	{
+		card_manage_prompt_tag_error();
+		return false;
+	}
+
+	card_manage_leave_room_operation();
+	home_id = card_index / 10;
+	card_manage_set_unit_by_home_id(home_id);
+	get_room_card_number_by_room_num(home_id * 10);
+	room_card_numbe_display();
+
+	if (card_manage_raw_id_to_tag_digits(get_card_id_data(card_index), stored_tag, sizeof(stored_tag)))
+	{
+		card_manage_tag_input_set(stored_tag);
+	}
+	card_manage_tag_confirmed = true;
+	card_manage_tag_replace_on_next_input = true;
+	Erase_font_display();
+	return true;
 }
 
 void check_and_set_card_data(int num)
@@ -583,6 +962,7 @@ static void card_manage_dialog_box_init(CARD_MANAGE_STATUS status_param)
 	memset(CardManageClass.dialog_box->font.string1, 0, 10);
 	card_manage_page_redraw();
 	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
+	card_manage_update_tag_fill_request();
 
 	if (status_param != CARD_MANAGE_STATUS_NONE && status_param < TOTAL_CARD_MANAGE_STATUS)
 	{
@@ -595,12 +975,10 @@ static int get_room_card_number_by_room_num(int room_num)
 	CardManageClass.room_card_info.room_card_num = 0;
 	for (int i = 0; i < 10; i++)
 	{
-		if (strlen(get_card_id_data(room_num + i)) == 0)
+		if (strlen(get_card_id_data(room_num + i)) > 0)
 		{
-
-			break;
+			CardManageClass.room_card_info.room_card_num++;
 		}
-		CardManageClass.room_card_info.room_card_num++;
 	}
 	return CardManageClass.room_card_info.room_card_num;
 }
@@ -651,6 +1029,7 @@ static void card_manage_key_up_up(void)
 		return;
 	clear_prev_card_manage_focus();
 	goto_prev_card_manage_focus();
+	card_manage_update_tag_fill_request();
 	display_current_card_manage_focus();
 	LOG_WHITE("card_manage_key_up_up sucess\n");
 }
@@ -661,6 +1040,7 @@ static void card_manage_key_down_up(void)
 		return;
 	clear_prev_card_manage_focus();
 	goto_next_card_manage_focus();
+	card_manage_update_tag_fill_request();
 	display_current_card_manage_focus();
 }
 
@@ -668,11 +1048,20 @@ static void card_manage_key_star_up(void)
 {
 	if (card_manage_prompt_consume_key())
 		return;
-	if (CardManageClass.dialog_box->cursor.index == 0 || CardManageClass.cur_focus.main != UNIT_FOCUS) // 返回
-		os_layout_goto(&layout_settings);
-
-	else if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER_CONFIRM)
+	if (card_manage_tag_entry_enabled() &&
+		card_manage_tag_has_value())
+	{
+		card_manage_tag_input_sub_number();
+		return;
+	}
+	if (CardManageClass.cur_focus.layer == CARD_MANAGE_MAIN_LAYER_CONFIRM)
+	{
+		card_manage_reset_main_input_state();
 		os_layout_goto(&layout_card_manage);
+	}
+
+	else if (CardManageClass.dialog_box->cursor.index == 0 || CardManageClass.cur_focus.main != UNIT_FOCUS) // 返回
+		os_layout_goto(&layout_settings);
 
 	else // 删除一个数
 	{
@@ -697,11 +1086,11 @@ static void card_manage_key_ring_up(void)
 		case UNIT_FOCUS:
 			if (CardManageClass.dialog_box->cursor.index == 0)
 				return;
-			CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM;
-			card_manage_home_id_adjust();
-			if (validity_check_unit_number() == true)
+			if (card_manage_prepare_unit_for_card_action() == true)
 			{
 				int home_id = calculateHomeId();
+				card_manage_enter_room_operation();
+				card_manage_tag_input_clear();
 				get_room_card_number_by_room_num(home_id * 10);
 				room_card_numbe_display();
 				if (unit_number_exist(home_id) == false)
@@ -712,6 +1101,7 @@ static void card_manage_key_ring_up(void)
 				}
 				memset(SwipingCard.string_buf, 0, sizeof(SwipingCard.string_buf));
 				SwipingCard.mode = CARD_ADD_CARD_MODE;
+				card_manage_update_tag_fill_request();
 			}
 			else
 			{
@@ -719,8 +1109,12 @@ static void card_manage_key_ring_up(void)
 			}
 			break;
 
+		case TAG_FOCUS:
+			card_manage_confirm_tag_for_delete();
+			break;
+
 		case ERASE_FOCUS:
-			card_manage_prompt_show(CARD_MANAGE_STATUS_ERROR);
+			card_manage_try_delete_confirmed_tag();
 			break;
 
 		case SAVE_FOCUS:
@@ -738,11 +1132,11 @@ static void card_manage_key_ring_up(void)
 		case UNIT_FOCUS:
 			break;
 
+		case TAG_FOCUS:
+			break;
+
 		case ERASE_FOCUS:
-			SwipingCard.mode = CARD_IDLE_MODE;
-			ak_thread_create(&thread_delete_card, delete_current_card,
-							 (void *)(calculateHomeId() * 10), ANYKA_THREAD_NORMAL_STACK_SIZE, -1);
-			card_manage_dialog_box_init(CARD_MANAGE_STATUS_DELETE_CARD);
+			card_manage_try_delete_confirmed_tag();
 			break;
 
 		case SAVE_FOCUS:
@@ -785,7 +1179,9 @@ static void layout_card_manage_init(void)
 static void layout_card_manage_enter(void)
 {
 	LOG_WHITE(">>> enter layout card manage \n\r");
+	card_manage_leave_room_operation();
 	CardManageClass.room_card_info.card_number_status_count = 0;
+	SwipingCard.tag_fill_request = false;
 
 	CardManageClass.widget_show.icon();
 	CardManageClass.widget_show.font();
@@ -803,19 +1199,16 @@ static void layout_card_manage_quit(void)
 	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER;
 	CardManageClass.cur_focus.main = UNIT_FOCUS;
 	CardManageClass.cur_focus.status = CARD_MANAGE_STATUS_NONE; // 重置状态
-	CardManageClass.room_card_info.card_number_status_count = 0;
-
-	CardManageClass.dialog_box->cursor.index = 0;
-	memset(CardManageClass.dialog_box->font.string1, 0, 10);
+	card_manage_reset_main_input_state();
 }
+
 static void *delete_current_card(void *arg)
 {
 	int card_base = (int)arg;
 	int home_id = card_base / 10;
-
-	LOG_WHITE("start delet %d\n", card_base);
 	char string[32] = {0};
 
+	LOG_WHITE("start delet %d\n", card_base);
 	if (card_base < 0 || card_base + 9 >= USER_CARD_TOTAL)
 	{
 		LOG_RED("delete card index out of range:%d\n", card_base);
@@ -823,6 +1216,7 @@ static void *delete_current_card(void *arg)
 		return NULL;
 	}
 
+	pthread_mutex_lock(&card_mutex);
 	for (int i = 0; i < 10; i++)
 	{
 		set_card_id_data(card_base + i, string);
@@ -830,6 +1224,56 @@ static void *delete_current_card(void *arg)
 	remove_unit_number_by_home_id(home_id);
 	card_id_data_save();
 	user_data_save();
+	pthread_mutex_unlock(&card_mutex);
+
+	ak_thread_exit();
+	return NULL;
+}
+
+static void *delete_single_card_by_tag(void *arg)
+{
+	int card_base = (int)arg;
+	int home_id = card_base / 10;
+	char string[32] = {0};
+	char stored_tag[CARD_MANAGE_TAG_INPUT_MAX + 1] = {0};
+	bool deleted = false;
+
+	LOG_WHITE("start delete single card %d tag:%s\n", card_base, card_manage_delete_tag);
+	if (card_base < 0 || card_base + 9 >= USER_CARD_TOTAL)
+	{
+		LOG_RED("delete single card index out of range:%d\n", card_base);
+		ak_thread_exit();
+		return NULL;
+	}
+
+	pthread_mutex_lock(&card_mutex);
+	for (int i = 0; i < 10; i++)
+	{
+		char *card_id = get_card_id_data(card_base + i);
+		if (strlen(card_id) == 0)
+		{
+			continue;
+		}
+		if (card_manage_raw_id_to_tag_digits(card_id, stored_tag, sizeof(stored_tag)) &&
+			strcmp(stored_tag, card_manage_delete_tag) == 0)
+		{
+			set_card_id_data(card_base + i, string);
+			deleted = true;
+			break;
+		}
+	}
+
+	if (deleted)
+	{
+		card_id_data_save();
+		if (get_room_card_number_by_room_num(card_base) <= 0)
+		{
+			remove_unit_number_by_home_id(home_id);
+			user_data_save();
+		}
+	}
+	pthread_mutex_unlock(&card_mutex);
+
 	ak_thread_exit();
 	return NULL;
 }

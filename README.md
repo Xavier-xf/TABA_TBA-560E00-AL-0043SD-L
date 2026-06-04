@@ -159,6 +159,111 @@ UNIT 房号设置页中，M1-M4 输入框上下或确认切换焦点时，原先
 - 保存失败或弹出房号已存在确认框时不移动焦点；真实发起保存或保存成功后清除 dirty，避免二次路过重复保存。
 - `home_id_set_add_number()` 改为先判断 `index <= max_index` 再写 `show_id[index]`，避免满 4 位后继续按数字造成越界写入。
 - 扩展静态测试，校验焦点切换不清空、数字输入前替换、输入后置 dirty、按键保存必须经过 dirty guard。
+## 2026-06-04（RFID 房间操作状态隔离、残留清理和按键音修正）
+
+### 问题描述：
+
+确认 `UNIT` 进入房间操作后，如果焦点移动到 `TAG` 或刷卡，容易让用户误以为进入了单张删卡或卡未添加；确认 UNIT 后未保存直接返回，再进入 TAG 输入错误卡号，弹窗关闭后可能重画上一次留下的 `SAVE:0` 或旧 TAG 卡号；另外在 TAG 焦点刷入未保存卡后，错误提示消失可能导致按键音消失。
+
+### 问题原因：
+
+UNIT 房间操作和 TAG 单张删卡曾共用部分焦点和刷卡填充路径，房间操作中的刷卡显示可能写入 TAG 单删输入缓存；未保存退出路径没有统一清理房间卡数量、旧刷卡 TAG、TAG 输入和成功显示标志；`CARD_TAG_FILL_MODE` 结束时依赖可能已被提示框清掉的 `tag_fill_request` 判断返回模式，导致主层 TAG 刷卡失败后可能错误回到 `CARD_ADD_CARD_MODE`，而该模式会抑制普通按键音。
+
+### 解决方法：
+
+通过显式房间操作状态隔离 UNIT 路径和 TAG 单删路径：确认 UNIT 后进入房间操作模式，TAG 行只作为当前卡号显示，不再接收键盘输入、退格或刷卡填充；未保存返回和 TAG 错误关闭时统一清理临时结果；TAG 填充流程结束后按当前页面层级决定回到 idle 还是 add-card，避免错误提示后按键音丢失。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/src/swiping_card.c`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 新增 `card_manage_room_operation_active`，确认 UNIT 成功后进入房间操作模式，退出或成功提示关闭时离开该模式。
+- 新增 `card_manage_tag_entry_enabled()`，只有 RFID 主层、TAG 焦点、未进入房间操作且无提示框时，才允许 TAG 键盘输入或刷卡填充。
+- 房间操作模式下，TAG 行不再接收数字输入、退格或刷卡单删填充，避免客户误以为可以通过 TAG 输入添卡。
+- TAG 单删准备成功不播放成功音；卡不存在或卡号错误时播放错误音并显示 `Card number error`。
+- TAG 反查补全 UNIT 时，显示层按直接输入格式显示，短房号如 `9` 不再显示为 `0009`。
+- 新增 `card_manage_clear_transient_result_state()`，统一清理 SAVE 数量、旧刷卡 TAG、TAG 输入、TAG 确认状态和刷卡成功标志。
+- 新增 `card_manage_reset_main_input_state()`，从确认层按 `*` 返回主界面前回到 `UNIT_FOCUS`、`CARD_MANAGE_MAIN_LAYER`、`CARD_IDLE_MODE`，并清空旧房号输入和临时结果。
+- TAG 错误提示关闭时不再按旧 `CARD_ADD_CARD_MODE` 缓存重画 TAG/SAVE，避免错误弹窗消失后旧值重新出现。
+- 新增 `card_manage_card_result_display()`，房间操作中的刷卡结果只做原始卡 ID 到屏幕 TAG 数字的显示转换，不修改 TAG 单删输入状态。
+- `CARD_TAG_FILL_MODE` 结束时按 `CardManageClass.cur_focus.layer` 返回：RFID 主层回 `CARD_IDLE_MODE`，确认层房间操作回 `CARD_ADD_CARD_MODE`，避免 TAG 错误提示后按键音消失。
+
+## 2026-06-04（RFID TAG 单张删卡与同级输入）
+
+### 问题描述：
+
+RFID 原有删除逻辑主要面向整户删除，无法在主界面直接输入或刷入 `TAG` 后删除单张卡；早期单删方案还存在必须先确认 `UNIT`、`TAG` 输入区域遮挡右侧箭头、`TAG confirmed` 弹窗观感奇怪、单删错误显示房号错误、`ERASE ROOM` 显示不全等问题。
+
+### 问题原因：
+
+旧逻辑没有独立的 TAG 输入和确认状态，刷卡数据存储为原始 `ID:` 十六进制字符串，而界面显示的是转换后的纯数字 TAG；同时 TAG 操作路径曾绑定在 `CARD_MANAGE_MAIN_LAYER_CONFIRM`，导致 TAG 不能与 UNIT 同级输入，删除时也容易被当前 UNIT 输入框状态误导。
+
+### 解决方法：
+
+将 `TAG` 与 `UNIT` 作为 RFID 主界面同级入口：`TAG` 焦点可手动输入纯数字卡号，也可刷已保存卡自动填充；TAG 确认时从已保存卡数据中反查所属房号，自动补全 UNIT 并刷新该房号卡数；`ERASE` 行用 `ERASE ROOM` / `ERASE TAG` 区分整户删除和单张删除，TAG 错误统一显示 `Card number error`。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/layout_card_manage.h`
+- `app_cu_datin/system/layout/language.c`
+- `app_cu_datin/system/layout/language.h`
+- `app_cu_datin/system/src/swiping_card.c`
+- `app_cu_datin/system/src/swiping_card.h`
+- `tests/test_card_prompt_interaction.sh`
+- `docs/superpowers/plans/2026-06-04-rfid-tag-peer-input.md`
+
+### 具体修改：
+
+- 新增 TAG 输入缓冲、TAG 确认状态和 TAG 输入替换标志，支持主界面直接输入纯数字 TAG。
+- 新增原始卡 ID 到屏幕 TAG 纯数字的转换逻辑，TAG 格式保留前导 0，例如 `0014246460`。
+- 新增按 TAG 反查已保存卡槽、按原始卡 ID 判断是否已保存、按 TAG 反查房号并回填 UNIT 的逻辑。
+- 新增 `CARD_TAG_FILL_MODE` 和 `SwipingCard.tag_fill_request`，TAG 焦点刷卡只填充 TAG，不走普通开门验证。
+- TAG 刷卡填充前先确认卡已保存；未保存卡显示 `Card number error` 并播放错误音。
+- TAG 确认后不再弹出 `TAG confirmed`，而是刷新 UNIT、SAVE 卡数和 ERASE 文案。
+- `ERASE` 行改为动态显示：TAG 未确认或无 TAG 时显示 `ERASE ROOM`，TAG 确认后显示 `ERASE TAG`。
+- `ERASE` 删除逻辑调整为：TAG 为空时删除当前 UNIT 整户；TAG 有值且确认成功时删除反查到的单张卡；TAG 未确认或找不到时显示 `Card number error`。
+- 删除单张卡后重新统计当前房号 10 个卡槽的非空数量，避免中间空槽导致数量显示错误；如果该房号已无卡，则从 `UserData.unit_number[]` 中移除该房号。
+- TAG 显示区域收窄到 `{{160, 71}, {240, 40}}`，避免覆盖右侧选择箭头。
+- `ERASE` 文案显示区域加宽到 `{{33, 114}, {200, 40}}`，避免 `ERASE ROOM` 显示不全。
+- 新增 `Card number error`、`ERASE ROOM`、`ERASE TAG` 等多语言字符串。
+
+
+
+
+
+## 2026-06-03（RFID 保存/删除提示关闭后焦点回 UNIT）
+
+### 问题描述：
+
+RFID 卡管理页中，输入房间号进入添卡或删卡操作后，如果在 `SAVE` 或 `ERASE` 上触发成功提示，提示关闭后选择箭头仍停留在 `SAVE` 或 `ERASE`，连续操作下一户时不够方便。
+
+### 问题原因：
+
+提示框关闭逻辑只清除状态并重绘页面，没有根据保存或删除成功场景重置当前焦点；如果在页面重绘后再单独移动焦点，还可能留下旧焦点箭头残影。
+
+### 解决方法：
+
+关闭保存或删除成功提示时，先将焦点状态切回 `UNIT_FOCUS` 和 `CARD_MANAGE_MAIN_LAYER`，再统一重绘 RFID 页面。错误提示不强制回 UNIT，避免用户处理当前错误时丢失操作位置。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 新增保存/删除成功提示关闭后的焦点重置逻辑。
+- 仅在关闭 `CARD_MANAGE_STATUS_DELETE_CARD` 或 `CARD_MANAGE_STATUS_SAVE_CARD` 时回到 `UNIT`。
+- 焦点状态先重置再整页重绘，避免旧 `SAVE/ERASE` 箭头残留。
+- 扩展静态测试，校验提示关闭后回到 `UNIT_FOCUS` 和主层。
+
+
+
 
 
 

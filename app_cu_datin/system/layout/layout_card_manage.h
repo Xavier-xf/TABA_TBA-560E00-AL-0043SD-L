@@ -1,6 +1,8 @@
 #ifndef LAYOUT_CARD_MANAGE_H
 #define LAYOUT_CARD_MANAGE_H
 
+#include <stdbool.h>
+
 typedef enum
 {
 	UNIT_FOCUS,
@@ -22,6 +24,7 @@ typedef enum
 	CARD_MANAGE_STATUS_SUCCESS,
 	CARD_MANAGE_STATUS_DELETE_CARD,
 	CARD_MANAGE_STATUS_SAVE_CARD,
+	CARD_MANAGE_STATUS_TAG_ERROR,
 	TOTAL_CARD_MANAGE_STATUS
 } CARD_MANAGE_STATUS;
 
@@ -57,5 +60,6 @@ typedef struct
 
 extern STR_CardManage CardManageClass;
 extern layout layout_card_manage;
+extern bool card_manage_fill_tag_by_card_id(char *card_id);
 
 #endif

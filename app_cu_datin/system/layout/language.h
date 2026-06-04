@@ -79,6 +79,8 @@ typedef enum
 	STR_CARD_MANAGE_UNIT,
 	STR_CARD_MANAGE_TAG,
 	STR_CARD_MANAGE_ERASE,
+	STR_CARD_MANAGE_ERASE_ROOM,
+	STR_CARD_MANAGE_ERASE_TAG,
 	STR_CARD_MANAGE_SAVE,
 
 	// -------------------------- 卡片编号输入界面文字 --------------------------
@@ -87,6 +89,7 @@ typedef enum
 	STR_CARD_NUMBER_ADD_SUCCESS,	   // Add card success (添卡成功)
 	STR_CARD_NUMBER_DELETE_SUCCESS,	   // Delete card success (删卡成功)
 	STR_CARD_NUMBER_UNIT_NUMBER_ERROR, // Room number error (房间号错误/不存在)
+	STR_CARD_NUMBER_TAG_ERROR,		   // Card number error (卡号错误/不存在)
 
 	// -------------------------- 刷卡操作界面文字 --------------------------
 	STR_SWIPING_CARD_PUT_CARD,	 // Please put your card in the card section (请将卡片放置到刷卡区)
