@@ -130,6 +130,36 @@ cd app_cu_datin
 
 
 
+## 2026-06-05（RFID TAG 单删状态返回和 ERASE 三态文案）
+
+### 问题描述：
+
+RFID 单张删卡流程中，TAG 输入或刷卡确认后会回填 `UNIT` 和 `SAVE`，但焦点仍停在 `TAG` 时，按返回键曾被当成 TAG 退格，可能把 `0015153840` 删除成 `001515383`；如果继续编辑已确认 TAG，也可能残留旧 UNIT/SAVE 上下文。另一个显示问题是 `ERASE` 行默认就显示整户删除含义，不利于区分默认状态、整户删除和单张删卡。
+
+### 问题原因：
+
+TAG 确认成功后没有切入与 UNIT 确认一致的确认层，`*` 键处理优先命中主层 TAG 输入退格逻辑；已确认 TAG 再编辑时，旧逻辑只取消 TAG 确认状态，没有同步清理由 TAG 反查出来的 UNIT/SAVE。`ERASE` 文案原先只按 TAG 是否确认做二分，未区分默认状态和 UNIT 房间操作状态。
+
+### 解决方法：
+
+TAG 确认成功后进入确认层并关闭主层 TAG 刷卡输入请求，使返回键走统一 reset 流程；已确认 TAG 被继续输入或退格前，先退出本次单删确认上下文并清理旧 UNIT/SAVE；`ERASE` 行改为三态显示：默认 `ERASE`，确认 UNIT 后显示 `ERASE ALL`，确认 TAG 后显示 `ERASE TAG`。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_card_manage.c`
+- `app_cu_datin/system/layout/language.c`
+- `app_cu_datin/system/layout/language.h`
+- `tests/test_card_prompt_interaction.sh`
+
+### 具体修改：
+
+- 新增 `card_manage_cancel_confirmed_tag_context()`，已确认 TAG 被继续输入或退格前，清除旧 UNIT、旧 SAVE、删除用 TAG 缓存和房号缓存。
+- TAG 确认成功后设置 `CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM`，并调用 `card_manage_update_tag_fill_request()`，避免返回键继续按 TAG 输入退格处理。
+- 默认 `ERASE` 文案去掉冒号，旧 `ERASE ROOM` 改为 `ERASE ALL`。
+- `Erase_font_display()` 改为三态选择：默认显示 `ERASE`，`card_manage_room_operation_active` 时显示 `ERASE ALL`，`card_manage_tag_confirmed` 时显示 `ERASE TAG`。
+- `STR_CARD_MANAGE_ERASE_ROOM` 重命名为 `STR_CARD_MANAGE_ERASE_ALL`，同步更新多语言表。
+- 扩展静态测试，校验 TAG 确认后进入确认层、已确认 TAG 编辑会退出单删上下文、`ERASE` 文案三态显示，并禁止旧 `ERASE ROOM`。
+
 ## 2026-06-03（UNIT 房号设置页输入替换和 dirty 保存）
 
 ### 问题描述：

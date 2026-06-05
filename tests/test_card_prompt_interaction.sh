@@ -12,13 +12,18 @@ SWIPING_CARD_H="$ROOT_DIR/app_cu_datin/system/src/swiping_card.h"
 grep -q 'STR_CARD_NUMBER_ADD_SUCCESS' "$LANG_H"
 grep -q 'STR_CARD_NUMBER_DELETE_SUCCESS' "$LANG_H"
 grep -q 'STR_CARD_NUMBER_TAG_ERROR' "$LANG_H"
-grep -q 'STR_CARD_MANAGE_ERASE_ROOM' "$LANG_H"
+grep -q 'STR_CARD_MANAGE_ERASE_ALL' "$LANG_H"
 grep -q 'STR_CARD_MANAGE_ERASE_TAG' "$LANG_H"
 grep -q '{"Add card success"' "$LANG_C"
 grep -q '{"Delete card success"' "$LANG_C"
 grep -q '{"Card number error"' "$LANG_C"
-grep -q '{"ERASE ROOM"' "$LANG_C"
+grep -Fq '{"ERASE",' "$LANG_C"
+grep -q '{"ERASE ALL"' "$LANG_C"
 grep -q '{"ERASE TAG"' "$LANG_C"
+if grep -q '{"ERASE ROOM"' "$LANG_C"; then
+	echo "room erase label must be ERASE ALL"
+	exit 1
+fi
 if grep -q '{"TAG confirmed"' "$LANG_C"; then
 	echo "TAG confirmation must not use a popup message"
 	exit 1
@@ -47,7 +52,7 @@ grep -q 'card_manage_prompt_close' "$CARD_MANAGE_C"
 grep -q 'STR_CARD_NUMBER_ADD_SUCCESS' "$CARD_MANAGE_C"
 grep -q 'STR_CARD_NUMBER_DELETE_SUCCESS' "$CARD_MANAGE_C"
 grep -q 'STR_CARD_NUMBER_TAG_ERROR' "$CARD_MANAGE_C"
-grep -q 'STR_CARD_MANAGE_ERASE_ROOM' "$CARD_MANAGE_C"
+grep -q 'STR_CARD_MANAGE_ERASE_ALL' "$CARD_MANAGE_C"
 grep -q 'STR_CARD_MANAGE_ERASE_TAG' "$CARD_MANAGE_C"
 grep -Fq 'position box_pos = {{152, 73}, {236, 66}};' "$CARD_MANAGE_C"
 grep -q 'CARD_PROMPT_ERROR_COLOR 0xFFFF0000' "$CARD_MANAGE_C"
@@ -256,23 +261,29 @@ awk '
 	in_confirm && /card_manage_set_unit_by_home_id/ { saw_unit_fill = 1 }
 	in_confirm && /card_manage_tag_confirmed = true;/ { saw_confirm = 1 }
 	in_confirm && /card_manage_leave_room_operation/ { saw_leave_room = 1 }
+	in_confirm && /CardManageClass\.cur_focus\.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM;/ { saw_confirm_layer = 1 }
+	in_confirm && /card_manage_update_tag_fill_request\(\);/ { saw_tag_request_update = 1 }
 	in_confirm && /card_manage_prompt_show\(CARD_MANAGE_STATUS_TAG_CONFIRMED\)/ { saw_popup = 1 }
 	in_confirm && /^}/ { in_confirm = 0 }
-	END { exit (!saw_unit_check && !saw_room_error && saw_count && saw_count_display && saw_tag_match && saw_unit_fill && saw_confirm && saw_leave_room && !saw_popup) ? 0 : 1 }
+	END { exit (!saw_unit_check && !saw_room_error && saw_count && saw_count_display && saw_tag_match && saw_unit_fill && saw_confirm && saw_leave_room && saw_confirm_layer && saw_tag_request_update && !saw_popup) ? 0 : 1 }
 ' "$CARD_MANAGE_C"
 awk '
 	/static void Erase_font_display/ { in_erase = 1 }
+	in_erase && /STR_CARD_MANAGE_ERASE/ { saw_default = 1 }
 	in_erase && /STR_CARD_MANAGE_ERASE_TAG/ { saw_tag = 1 }
-	in_erase && /STR_CARD_MANAGE_ERASE_ROOM/ { saw_room = 1 }
+	in_erase && /STR_CARD_MANAGE_ERASE_ALL/ { saw_all = 1 }
+	in_erase && /card_manage_room_operation_active/ { saw_room_operation = 1 }
 	in_erase && /^}/ { in_erase = 0 }
-	END { exit (saw_tag && saw_room) ? 0 : 1 }
+	END { exit (saw_default && saw_tag && saw_all && saw_room_operation) ? 0 : 1 }
 ' "$CARD_MANAGE_C"
 awk '
 	/static void card_manage_tag_input_add_number/ { in_add = 1 }
 	in_add && /card_manage_tag_confirmed = false;/ { add_clears = 1 }
+	in_add && /card_manage_cancel_confirmed_tag_context\(\);/ { add_cancels_context = 1 }
 	in_add && /^}/ { in_add = 0 }
 	/static void card_manage_tag_input_sub_number/ { in_sub = 1 }
 	in_sub && /card_manage_tag_confirmed = false;/ { sub_clears = 1 }
+	in_sub && /card_manage_cancel_confirmed_tag_context\(\);/ { sub_cancels_context = 1 }
 	in_sub && /^}/ { in_sub = 0 }
 	/static void card_manage_tag_input_set/ { in_set = 1 }
 	in_set && /card_manage_tag_confirmed = false;/ { set_clears = 1 }
@@ -280,7 +291,22 @@ awk '
 	/static void card_manage_tag_input_clear/ { in_clear = 1 }
 	in_clear && /card_manage_tag_confirmed = false;/ { clear_clears = 1 }
 	in_clear && /^}/ { in_clear = 0 }
-	END { exit (add_clears && sub_clears && set_clears && clear_clears) ? 0 : 1 }
+	END { exit (add_clears && add_cancels_context && sub_clears && sub_cancels_context && set_clears && clear_clears) ? 0 : 1 }
+' "$CARD_MANAGE_C"
+awk '
+	/static void card_manage_cancel_confirmed_tag_context/ { in_cancel = 1 }
+	in_cancel && /if \(!card_manage_tag_confirmed\)/ { saw_confirm_guard = 1 }
+	in_cancel && /card_manage_tag_confirmed = false;/ { saw_confirm_clear = 1 }
+	in_cancel && /memset\(card_manage_delete_tag/ { saw_delete_tag_clear = 1 }
+	in_cancel && /CardManageClass\.room_card_info\.room_card_num = 0;/ { saw_count_clear = 1 }
+	in_cancel && /memset\(CardManageClass\.room_card_info\.home_id/ { saw_home_id_clear = 1 }
+	in_cancel && /CardManageClass\.dialog_box->cursor\.index = 0;/ { saw_cursor_clear = 1 }
+	in_cancel && /memset\(CardManageClass\.dialog_box->font\.string1/ { saw_unit_string_clear = 1 }
+	in_cancel && /gui_erase\(&unit_pos/ { saw_unit_erase = 1 }
+	in_cancel && /gui_erase\(&save_pos/ { saw_save_erase = 1 }
+	in_cancel && /Erase_font_display\(\);/ { saw_erase_refresh = 1 }
+	in_cancel && /^}/ { in_cancel = 0 }
+	END { exit (saw_confirm_guard && saw_confirm_clear && saw_delete_tag_clear && saw_count_clear && saw_home_id_clear && saw_cursor_clear && saw_unit_string_clear && saw_unit_erase && saw_save_erase && saw_erase_refresh) ? 0 : 1 }
 ' "$CARD_MANAGE_C"
 awk '
 	/static void card_manage_set_unit_by_home_id/ { in_set = 1 }

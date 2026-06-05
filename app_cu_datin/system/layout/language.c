@@ -70,8 +70,8 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Success", "موفق"},
 		{"UNIT:", "واحد"},
 		{"TAG:", "تگ"},
-		{"ERASE:", "پاک کردن "},
-		{"ERASE ROOM", "حذف اتاق"},
+		{"ERASE", "پاک کردن"},
+		{"ERASE ALL", "حذف همه"},
 		{"ERASE TAG", "حذف کارت"},
 		{"SAVE:", "ذخیره"},
 		// layout card number font

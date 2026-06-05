@@ -626,3 +626,95 @@
   - 保存/删除成功提示关闭后焦点回 UNIT。
   - TAG 单张删卡、TAG 与 UNIT 同级输入、TAG 确认后反查房号、`ERASE ROOM` / `ERASE TAG` 动态文案。
   - TAG/UNIT 状态隔离、未保存退出临时结果清理、TAG 刷卡失败后按键音恢复。
+
+## 2026-06-05 RFID 已确认 TAG 被编辑后退出单删上下文
+- 用户反馈：TAG 焦点输入正确卡号并确认后，会出现 UNIT 和 SAVE；但焦点仍在 TAG，此时可以按 `*` 删除 TAG 里的卡号。用户认为这个时候应该退出单删卡模式。
+- 已按 `superpowers:systematic-debugging` 复核根因：
+  - TAG 确认成功后会通过 `card_manage_set_unit_by_home_id()` 和 `room_card_numbe_display()` 回填 UNIT/SAVE，这些是 TAG 确认推导出的上下文。
+  - 旧 `card_manage_tag_input_sub_number()` 只设置 `card_manage_tag_confirmed = false` 并刷新 ERASE 文案，没有清理旧 UNIT/SAVE。
+  - 因此用户删除 TAG 数字后，虽然内部确认状态已取消，但界面仍显示旧房号和旧卡数，状态表现不一致。
+- 已按 TDD 更新 `tests/test_card_prompt_interaction.sh`：
+  - 要求新增 `card_manage_cancel_confirmed_tag_context()`。
+  - 要求 TAG 输入和 TAG 退格前调用该函数。
+  - 要求该函数清理 `card_manage_delete_tag`、旧 UNIT、旧 SAVE、房号缓存和 TAG 确认状态，并刷新 `ERASE` 文案。
+- 已修改 `app_cu_datin/system/layout/layout_card_manage.c`：
+  - 新增 `card_manage_cancel_confirmed_tag_context()`。
+  - 在 `card_manage_tag_input_add_number()` 和 `card_manage_tag_input_sub_number()` 开头调用该函数。
+  - 如果 TAG 已确认，继续编辑或删除 TAG 时会退出单删确认上下文，清掉旧 UNIT/SAVE；如果 TAG 未确认，该函数直接返回，不影响普通 TAG 输入。
+- 已完成验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_card_manage.c tests/test_card_prompt_interaction.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+
+## 2026-06-05 RFID TAG 确认后返回键行为修正
+- 用户澄清真实问题：在 `TAG` 输入或刷卡填充正确卡号 `0015153840` 后按确认，界面已回填 `UNIT` 和 `SAVE`；此时按 `*` 应像确认 `UNIT` 后一样返回 RFID 主界面，而不是回设置页，也不是把 TAG 删除成 `001515383`。
+- 已按 `superpowers:systematic-debugging` 复核根因：
+  - `card_manage_key_star_up()` 先检查 `card_manage_tag_entry_enabled() && card_manage_tag_has_value()`，再检查确认层返回。
+  - TAG 确认成功后旧代码仍停留在 `CARD_MANAGE_MAIN_LAYER` 和 `TAG_FOCUS`，所以 `*` 被当成 TAG 退格。
+  - 正确做法是 TAG 确认成功后进入与 UNIT 确认相同的确认/操作层，让 `*` 命中 `card_manage_reset_main_input_state()`。
+- 已按 TDD 更新 `tests/test_card_prompt_interaction.sh`：
+  - 先新增断言，要求 `card_manage_confirm_tag_for_delete()` 成功后设置 `CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM`，并调用 `card_manage_update_tag_fill_request()`。
+  - 运行 `bash tests/test_card_prompt_interaction.sh` 确认 RED 失败。
+- 已修改 `app_cu_datin/system/layout/layout_card_manage.c`：
+  - TAG 确认成功、回填 `UNIT/SAVE` 并设置 `card_manage_tag_confirmed = true` 后，切到 `CARD_MANAGE_MAIN_LAYER_CONFIRM`。
+  - 同步刷新 TAG 刷卡请求，关闭主层 TAG 输入态。
+- 已完成静态验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+- 已完成编译与打包：
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/language.h app_cu_datin/system/layout/language.c app_cu_datin/system/layout/layout_card_manage.c tests/test_card_prompt_interaction.sh task_plan.md findings.md progress.md` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `598127 bytes`，包头 `# File Parttion: app.sqsh4 0 598016`。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+- 已完成编译与打包：
+  - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/layout/layout_card_manage.c tests/test_card_prompt_interaction.sh task_plan.md findings.md progress.md` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `598127 bytes`，包头 `# File Parttion: app.sqsh4 0 598016`。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+## 2026-06-05 RFID ERASE 三态文案调整
+- 用户要求：默认状态显示 `ERASE`；删除房号/整户删除语义显示 `ERASE ALL`；单删卡语义显示 `ERASE TAG`。用户确认之前 `EARSE` 是输入笔误，最终使用正确拼写 `ERASE`。
+- 已按 `superpowers:brainstorming` 补充确认方案；此前直接改测试预期为 `EARSE` 是流程错误，已纠正为 `ERASE`。
+- 已按 TDD 更新 `tests/test_card_prompt_interaction.sh`：
+  - 要求 `STR_CARD_MANAGE_ERASE_ALL` 替代旧 `STR_CARD_MANAGE_ERASE_ROOM`。
+  - 要求语言表存在 `ERASE`、`ERASE ALL`、`ERASE TAG`，并禁止旧 `ERASE ROOM`。
+  - 要求 `Erase_font_display()` 同时覆盖默认、房间操作和 TAG 确认三态。
+  - 运行 `bash tests/test_card_prompt_interaction.sh` 确认 RED 失败。
+- 已修改：
+  - `app_cu_datin/system/layout/language.h`：`STR_CARD_MANAGE_ERASE_ROOM` 改为 `STR_CARD_MANAGE_ERASE_ALL`。
+  - `app_cu_datin/system/layout/language.c`：默认文案从 `ERASE:` 改为 `ERASE`，房间删除文案从 `ERASE ROOM` 改为 `ERASE ALL`。
+  - `app_cu_datin/system/layout/layout_card_manage.c`：`Erase_font_display()` 改为默认 `ERASE`、`card_manage_room_operation_active` 时 `ERASE ALL`、`card_manage_tag_confirmed` 时 `ERASE TAG`。
+- 已完成静态验证：
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+
+## 2026-06-05 README 补充 RFID TAG 返回和 ERASE 三态记录
+- 用户要求：遵守 Superpowers 和 context-engineering-marketplace 的约定，将当前 RFID 修改按 `README.md` 既有格式写入。
+- 已确认当前可用能力：
+  - Superpowers 插件已启用，使用 `superpowers:verification-before-completion` 做完成前验证。
+  - context-engineering-marketplace 以拆分 skills 形式可用，本轮使用 `planning-with-files-zh` 和 `filesystem-context` 维护文件化上下文。
+- 已在 `README.md` 顶部新增 `2026-06-05（RFID TAG 单删状态返回和 ERASE 三态文案）`。
+- 新增内容覆盖：
+  - TAG 确认后返回键走与 UNIT 确认一致的 reset 流程，不再把 TAG 当作输入退格。
+  - 已确认 TAG 再被输入或退格时，退出单删确认上下文并清理旧 UNIT/SAVE。
+  - `ERASE` 三态文案：默认 `ERASE`、房间操作 `ERASE ALL`、单删卡 `ERASE TAG`。
+- 已同步更新 `task_plan.md`，新增阶段 33 标记 README 文档同步完成。
+- 已完成验证：
+  - `git diff --check -- README.md task_plan.md progress.md findings.md` 通过。
+  - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。

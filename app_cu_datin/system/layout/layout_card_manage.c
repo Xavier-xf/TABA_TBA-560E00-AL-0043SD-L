@@ -263,8 +263,30 @@ static void card_manage_tag_input_set(const char *tag_digits)
 	Erase_font_display();
 }
 
+static void card_manage_cancel_confirmed_tag_context(void)
+{
+	position unit_pos = {{160, 28}, {160, 40}};
+	position save_pos = {{160, 157}, {160, 40}};
+
+	if (!card_manage_tag_confirmed)
+	{
+		return;
+	}
+
+	card_manage_tag_confirmed = false;
+	memset(card_manage_delete_tag, 0, sizeof(card_manage_delete_tag));
+	CardManageClass.room_card_info.room_card_num = 0;
+	memset(CardManageClass.room_card_info.home_id, 0, sizeof(CardManageClass.room_card_info.home_id));
+	CardManageClass.dialog_box->cursor.index = 0;
+	memset(CardManageClass.dialog_box->font.string1, 0, 10);
+	gui_erase(&unit_pos, 0x00000000);
+	gui_erase(&save_pos, 0x00000000);
+	Erase_font_display();
+}
+
 static void card_manage_tag_input_add_number(unsigned char number)
 {
+	card_manage_cancel_confirmed_tag_context();
 	card_manage_tag_confirmed = false;
 	if (card_manage_tag_replace_on_next_input)
 	{
@@ -286,6 +308,7 @@ static void card_manage_tag_input_add_number(unsigned char number)
 
 static void card_manage_tag_input_sub_number(void)
 {
+	card_manage_cancel_confirmed_tag_context();
 	card_manage_tag_confirmed = false;
 	card_manage_tag_replace_on_next_input = false;
 	if (card_manage_tag_input_index <= 0)
@@ -582,12 +605,20 @@ static void Erase_font_display(void)
 {
 	position pos = {{33, 114}, {200, 40}};
 	text password_set;
+	STRING_ID erase_str_id = STR_CARD_MANAGE_ERASE;
 
 	text_init(&password_set, &pos, 22);
 	password_set.align = LEFT_TOP;
 	gui_erase(&pos, 0x00);
-	text_display(&password_set,
-				 font_str(card_manage_tag_confirmed ? STR_CARD_MANAGE_ERASE_TAG : STR_CARD_MANAGE_ERASE_ROOM));
+	if (card_manage_tag_confirmed)
+	{
+		erase_str_id = STR_CARD_MANAGE_ERASE_TAG;
+	}
+	else if (card_manage_room_operation_active)
+	{
+		erase_str_id = STR_CARD_MANAGE_ERASE_ALL;
+	}
+	text_display(&password_set, font_str(erase_str_id));
 }
 
 static void Save_font_display(void)
@@ -892,6 +923,8 @@ static bool card_manage_confirm_tag_for_delete(void)
 	}
 	card_manage_tag_confirmed = true;
 	card_manage_tag_replace_on_next_input = true;
+	CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM;
+	card_manage_update_tag_fill_request();
 	Erase_font_display();
 	return true;
 }

@@ -149,3 +149,21 @@
 - 正确返回依据不是 `tag_fill_request`，而是当前 RFID 页面层级：主层 TAG 填充失败/结束后回 `CARD_IDLE_MODE`；确认层房间操作中的刷卡处理结束后才回 `CARD_ADD_CARD_MODE`。
 - UNIT 房间操作里的刷卡结果只是当前刷卡显示和添卡反馈，不应写入 `card_manage_tag_input` 或清理 TAG 单删输入；否则 `ERASE` 会因为 TAG 输入缓存有值而从整户删除语义切到单张删除语义。
 - 修复边界是把“刷卡结果显示”和“TAG 单删输入状态”拆开：`room_card_string_buf_display()` 只调用只读显示函数，`card_manage_card_result_display()` 只把原始卡 ID 转成屏幕数字并绘制，不修改 TAG 输入/确认状态。
+
+## RFID 已确认 TAG 被编辑后的单删状态退出
+- TAG 确认成功后会反查并回填 `UNIT` 和 `SAVE`，这些值代表“当前 TAG 已确认并绑定到某户”的上下文，而不是用户直接输入的房间状态。
+- 旧退格逻辑只把 `card_manage_tag_confirmed` 置为 `false` 并重画 `ERASE` 文案，但没有清掉由 TAG 确认推导出来的 `UNIT` 和 `SAVE`；用户在 TAG 焦点按 `*` 删除卡号后，界面仍显示旧房号和旧卡数，容易误以为仍处于单删卡模式。
+- 正确边界是：只要用户在已确认 TAG 后继续输入或退格，就必须退出本次单删确认上下文，清除旧 `UNIT`、旧 `SAVE`、删除用 TAG 缓存和房号输入缓存；保留用户正在编辑的 TAG 输入本身。
+- 该清理不能直接复用 `card_manage_clear_transient_result_state()`，因为那个函数会把 TAG 输入也清空；本场景需要清理“确认上下文”，但允许用户继续编辑当前 TAG。
+
+## RFID TAG 确认后返回键语义
+- `card_manage_key_star_up()` 的判断顺序是先处理主层 TAG 输入退格，再处理 `CARD_MANAGE_MAIN_LAYER_CONFIRM` 的返回 reset。
+- TAG 确认成功后如果仍停留在 `CARD_MANAGE_MAIN_LAYER`，即使已经回填了 `UNIT` 和 `SAVE`，`*` 仍会被当成 TAG 删除一位处理，表现为 `0015153840` 变成 `001515383`。
+- TAG 确认成功后的语义更接近 UNIT 确认后的操作层：用户看到的是已确认卡号对应房号和卡数，此时 `*` 应走 `card_manage_reset_main_input_state()`，返回 RFID 主操作界面，而不是编辑 TAG 字符串。
+- 修复边界是 TAG 确认成功后设置 `CardManageClass.cur_focus.layer = CARD_MANAGE_MAIN_LAYER_CONFIRM`，并调用 `card_manage_update_tag_fill_request()` 让 TAG 刷卡输入请求同步关闭。
+
+## RFID ERASE 三态文案
+- 旧 `Erase_font_display()` 只按 `card_manage_tag_confirmed` 二分：未确认 TAG 显示 `ERASE ROOM`，已确认 TAG 显示 `ERASE TAG`。
+- 用户希望默认状态不要暗示整户删除，因此主层未进入 UNIT 房间操作、也未确认 TAG 时应只显示 `ERASE`。
+- 房间操作态由 `card_manage_room_operation_active` 表示，确认 `UNIT` 后进入，此时 `ERASE` 的实际动作是整户删除，应显示 `ERASE ALL`。
+- TAG 单删态仍由 `card_manage_tag_confirmed` 表示，优先级高于房间操作态，应显示 `ERASE TAG`。
