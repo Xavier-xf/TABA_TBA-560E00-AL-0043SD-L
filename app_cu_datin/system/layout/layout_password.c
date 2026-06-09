@@ -331,9 +331,16 @@ static void display_delay_message(int delay_seconds)
 	position pos = {{111, 150}, {258, 40}};
 	text delay_msg;
 	char delay_str[64];
+	const char *delay_template = font_str(STR_PASSWORD_WAIT_SECONDS);
+
+	if (language_get() == language_persian)
+	{
+		pos = (position){{70, 150}, {340, 40}};
+	}
+
 	gui_erase(&pos, 0x00000000);
 	text_init(&delay_msg, &pos, 20);
-	snprintf(delay_str, sizeof(delay_str), "Please wait %d seconds", delay_seconds);
+	snprintf(delay_str, sizeof(delay_str), delay_template, delay_seconds);
 	text_display(&delay_msg, delay_str);
 }
 

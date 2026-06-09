@@ -26,6 +26,7 @@
 #define INTERCOM_HEARTBEAT_INTERVAL_MS 1000
 #define INTERCOM_HEARTBEAT_DEFER_MS 500
 #define INTERCOM_BUS_BUSY_TIMEOUT_MS 4000
+#define INTERCOM_AMPLIFIER_REOPEN_DELAY_MS 2000
 
 /************************************************************/
 

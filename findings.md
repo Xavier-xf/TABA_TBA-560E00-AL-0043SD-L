@@ -167,3 +167,10 @@
 - 用户希望默认状态不要暗示整户删除，因此主层未进入 UNIT 房间操作、也未确认 TAG 时应只显示 `ERASE`。
 - 房间操作态由 `card_manage_room_operation_active` 表示，确认 `UNIT` 后进入，此时 `ERASE` 的实际动作是整户删除，应显示 `ERASE ALL`。
 - TAG 单删态仍由 `card_manage_tag_confirmed` 表示，优先级高于房间操作态，应显示 `ERASE TAG`。
+
+## 大楼机通话结束后功放延时恢复
+- `amplifier_gpio_control(true)` 在当前硬件抽象中表示打开功放，实际把 `IO_AMPLIFIER_CTRL` 拉低；`amplifier_gpio_control(false)` 表示关闭功放，实际把该 GPIO 拉高。
+- 监控/通话开始路径 `intercom_monitor_start_process()` 会打开摄像头、功放和咪头。
+- 监控/通话结束路径集中在 `monitor_status_check()`：`INT_READ_MONITOR_STATUS` 800ms 收尾和 `INT_TALK` 2 分钟超时强制关闭都会关闭摄像头和咪头，但旧代码没有关闭功放。
+- 不能在结束路径直接 `ak_sleep_ms(2000)` 后再打开功放，因为这会阻塞 `intercom_event_detect()`，影响 CAN 收包、心跳发送/避让和业务状态释放。
+- 修复边界应放在 `intercom.c` 内：关闭输出时同步关功放并记录时间，后续由事件循环轮询 2 秒恢复；如果 2 秒内重新开始通话，开始流程取消 pending 并立即打开功放。

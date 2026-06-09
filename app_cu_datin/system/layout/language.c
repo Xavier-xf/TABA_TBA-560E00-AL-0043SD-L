@@ -27,6 +27,7 @@ const char *multi_lingual[STR_TOTAL][language_total] =
 		{"Success", "موفق"},
 		{"Welcome", "خوش آمدی"},
 		{"Password Error", "رمز اشتباه است"},
+		{"Please wait %d seconds", "لطفا %d ثانیه صبر کنید"},
 		// layout settings font
 		{"System Setting", "تنظیمات سیستم"},
 		{"Unlock Password", "تنظیمات رمز درب بازکن"},

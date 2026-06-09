@@ -515,3 +515,41 @@
    - 验证：
      - `git diff --check -- README.md task_plan.md progress.md findings.md` 通过。
      - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。
+
+34. [complete] 大楼机通话结束后功放延时恢复
+   - 目标：
+     - 大楼机通话/监控结束时，在关闭摄像头和咪头的同时关闭功放。
+     - 关闭功放后等待 2 秒，再由软件重新打开功放。
+   - 修复计划：
+     - `app_cu_datin/system/src/intercom.h`：新增 `INTERCOM_AMPLIFIER_REOPEN_DELAY_MS 2000`。
+     - `app_cu_datin/system/src/intercom.c`：新增功放延时恢复状态、关闭输出 helper 和周期恢复检查。
+     - `app_cu_datin/system/src/intercom.c`：通话开始时取消上一次 pending，避免新通话被延时恢复状态影响。
+     - `tests/test_intercom_amplifier_recovery.sh`：新增静态回归，锁定关闭摄像头/咪头/功放和 2 秒恢复逻辑。
+   - 验证计划：
+     - `bash tests/test_intercom_amplifier_recovery.sh` 先 RED 后通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+     - `bash tests/test_brancher_heartbeat.sh` 通过。
+     - `git -c core.whitespace=cr-at-eol diff --check -- app_cu_datin/system/src/intercom.c app_cu_datin/system/src/intercom.h tests/test_intercom_amplifier_recovery.sh task_plan.md findings.md progress.md docs/superpowers/specs/2026-06-09-intercom-amplifier-delayed-reopen-design.md docs/superpowers/plans/2026-06-09-intercom-amplifier-delayed-reopen.md` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+     - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+     - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+     - 最终 APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `598127 bytes`。
+     - 包头：`# File Parttion: app.sqsh4 0 598016`。
+     - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+35. [complete] README 补充波斯语文本修正和功放延时恢复记录
+   - 用户要求：
+     - 将本次“大楼机通话结束后功放延时恢复”修改写入 `README.md`。
+     - 将上次“波斯语设置界面 `کارت دسترسی` 显示异常”和“密码错误三次等待提示波斯语显示异常”一并写入 `README.md`。
+   - 已补充：
+     - `2026-06-09（波斯语设置页和密码等待提示显示修正）`。
+     - `2026-06-09（大楼机通话结束后功放延时恢复）`。
+   - 覆盖范围：
+     - 设置页波斯语卡管理文本独立坐标、宽度、字号、右对齐和避免覆盖焦点箭头。
+     - 密码三次错误等待提示新增多语言字符串，波斯语使用独立宽显示区域。
+     - 通话/监控结束时关闭摄像头、咪头和功放，2 秒后事件循环恢复功放。
+   - 验证：
+     - `git diff --check -- README.md task_plan.md progress.md` 通过。
+     - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。
+     - `rg -n "波斯语设置页和密码等待提示显示修正|大楼机通话结束后功放延时恢复" README.md` 确认两个新增标题存在。

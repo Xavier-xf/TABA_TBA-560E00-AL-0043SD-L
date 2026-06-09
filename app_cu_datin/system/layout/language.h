@@ -30,6 +30,7 @@ typedef enum
 	STR_PASSWORD_SUCCESS,				   // Success (成功)
 	STR_PASSWORD_WELCOME,				   // Welcome (欢迎)
 	STR_PASSWORD_ERROR,					   // Password Error (密码错误)
+	STR_PASSWORD_WAIT_SECONDS,			   // Please wait %d seconds (请等待%d秒)
 
 	// -------------------------- 设置主界面文字 --------------------------
 	STR_SET_SYSTEM_SET,			 // System Setting (系统设置)

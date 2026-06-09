@@ -178,9 +178,24 @@ static void set_card_set_font_display(void)
 {
 	position pos = {{330, 96}, {56, 30}};
 	text card_set;
+	int text_size = 20;
+	align card_set_align = LEFT_TOP;
 
-	text_init(&card_set, &pos, 20);
-	card_set.align = LEFT_TOP;
+	if (language_get() == language_persian)
+	{
+		position focus_pos = {{425, 90}, {32, 32}};
+
+		pos = (position){{300, 96}, {120, 30}};
+		text_size = 18;
+		card_set_align = RIGHT_MIDDLE;
+		if (pos.point.x + pos.vector.width > focus_pos.point.x)
+		{
+			pos.vector.width = focus_pos.point.x - pos.point.x;
+		}
+	}
+
+	text_init(&card_set, &pos, text_size);
+	card_set.align = card_set_align;
 	text_display(&card_set, font_str(STR_SET_CARD_MANAGEMENT));
 }
 

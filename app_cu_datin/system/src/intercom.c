@@ -18,11 +18,13 @@ static struct ak_timeval g_heartbeat_send_time = {0, 0};
 static struct ak_timeval g_intercom_bus_active_time = {0, 0};
 static struct ak_timeval g_intercom_bus_busy_start_time = {0, 0};
 static struct ak_timeval g_intercom_bus_release_time = {0, 0};
+static struct ak_timeval g_amplifier_reopen_time = {0, 0};
 static bool g_heartbeat_started = false;
 static bool g_intercom_bus_active_started = false;
 static bool g_intercom_bus_busy_started = false;
 static bool g_intercom_bus_release_started = false;
 static bool g_intercom_bus_busy = false;
+static bool g_amplifier_reopen_pending = false;
 static INTERCOM_BUSINESS_TYPE g_intercom_business_type = INTERCOM_BUSINESS_NONE;
 static void send_can_cmd_encode(unsigned char cmd, unsigned char data1, unsigned char data2, unsigned char data3, unsigned char data4);
 static void intercom_business_begin(INTERCOM_BUSINESS_TYPE type)
@@ -64,10 +66,43 @@ static void intercom_unlock_end_process(void)
 	intercom_open_door(false);
 }
 
+static void intercom_amplifier_reopen_cancel(void)
+{
+	g_amplifier_reopen_pending = false;
+}
+
+static void intercom_talk_output_close_then_reopen_amp(void)
+{
+	camera_led_gpio_control(false);
+	camera_power_gpio_control(false);
+	mic_mute_gpio_control(false);
+	amplifier_gpio_control(false);
+	ak_get_ostime(&g_amplifier_reopen_time);
+	g_amplifier_reopen_pending = true;
+}
+
+static void intercom_amplifier_reopen_check(void)
+{
+	struct ak_timeval now_time;
+
+	if (!g_amplifier_reopen_pending)
+	{
+		return;
+	}
+
+	ak_get_ostime(&now_time);
+	if (ak_diff_ms_time(&now_time, &g_amplifier_reopen_time) >= INTERCOM_AMPLIFIER_REOPEN_DELAY_MS)
+	{
+		amplifier_gpio_control(true);
+		g_amplifier_reopen_pending = false;
+	}
+}
+
 static void intercom_monitor_start_process(void)
 {
 	Intercom.send_cmd(CMD_ACK, 0x01, CMD_NULL, CMD_NULL, CMD_NULL);
 	Intercom.status = INT_TALK;
+	intercom_amplifier_reopen_cancel();
 	camera_led_gpio_control(true);
 	camera_power_gpio_control(true);
 	amplifier_gpio_control(true);
@@ -210,9 +245,7 @@ static void monitor_status_check(void)
 		if (ak_diff_ms_time(&current_cpu_time, &start_cpu_time) >= 800)
 		{
 			Intercom.status = INT_IDLE;
-			camera_led_gpio_control(false);
-			camera_power_gpio_control(false);
-			mic_mute_gpio_control(false);
+			intercom_talk_output_close_then_reopen_amp();
 			intercom_business_finish_delay();
 		}
 	}
@@ -228,9 +261,7 @@ static void monitor_status_check(void)
 		if (ak_diff_ms_time(&g_monitor_2min_end_time, &g_monitor_2min_start_time) >= MONITOR_2MIN_TIMEOUT_MS)
 		{
 			Intercom.status = INT_IDLE;
-			camera_led_gpio_control(false);
-			camera_power_gpio_control(false);
-			mic_mute_gpio_control(false);
+			intercom_talk_output_close_then_reopen_amp();
 			LOG_WHITE("Monitor 2 minutes timeout, force close!\n");
 		}
 		standby_timer_reset();
@@ -385,6 +416,7 @@ void intercom_event_detect(void)
 
 	intercom_heartbeat_check();
 	monitor_status_check();
+	intercom_amplifier_reopen_check();
 }
 
 /********************************************************************************

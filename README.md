@@ -128,6 +128,68 @@ cd app_cu_datin
 - 建议每次重要改动后使用 `./autobuild.sh -bk` 备份代码
 
 
+## 2026-06-09（大楼机通话结束后功放延时恢复）
+
+### 问题描述：
+
+大楼机当前通话或监控结束时会关闭摄像头和咪头，但功放仍保持打开状态。用户要求通话结束时同步关闭摄像头、咪头和功放，并在等待 2 秒后由软件重新打开功放。
+
+### 问题原因：
+
+通话/监控开始路径会打开摄像头、功放和咪头，但结束路径集中在 `monitor_status_check()` 中，`INT_READ_MONITOR_STATUS` 800ms 收尾和 `INT_TALK` 2 分钟超时强制关闭都只关闭了摄像头和咪头，没有关闭功放。直接在结束路径阻塞等待 2 秒会影响 CAN 收包、心跳检查和业务状态释放，因此不能使用 `ak_sleep_ms(2000)` 做同步等待。
+
+### 解决方法：
+
+在通话输出关闭时统一关闭摄像头、咪头和功放，并记录关闭时间；由 `intercom_event_detect()` 周期检查，超过 2 秒后重新打开功放。如果 2 秒内又开始新的通话/监控，先取消上一次延时恢复状态，再立即打开功放，避免影响新通话。
+
+### 涉及文件：
+
+- `app_cu_datin/system/src/intercom.c`
+- `app_cu_datin/system/src/intercom.h`
+- `tests/test_intercom_amplifier_recovery.sh`
+- `docs/superpowers/specs/2026-06-09-intercom-amplifier-delayed-reopen-design.md`
+- `docs/superpowers/plans/2026-06-09-intercom-amplifier-delayed-reopen.md`
+
+### 具体修改：
+
+- 新增 `INTERCOM_AMPLIFIER_REOPEN_DELAY_MS 2000`，明确功放延时恢复时间为 2 秒。
+- 新增功放延时恢复 pending 状态和 `g_amplifier_reopen_time` 时间记录。
+- 新增 `intercom_talk_output_close_then_reopen_amp()`，统一关闭摄像头灯、摄像头电源、咪头和功放。
+- 新增 `intercom_amplifier_reopen_check()`，在事件循环中超过 2 秒后重新打开功放。
+- `intercom_monitor_start_process()` 新增取消 pending 逻辑，新通话开始时立即恢复功放打开状态。
+- `monitor_status_check()` 中两个通话结束路径统一改为调用关闭输出 helper。
+- 新增 `tests/test_intercom_amplifier_recovery.sh`，静态校验关闭摄像头/咪头/功放、2 秒恢复、新通话取消 pending 和两个结束路径覆盖。
+
+
+## 2026-06-09（波斯语设置页和密码等待提示显示修正）
+
+### 问题描述：
+
+波斯语下设置界面的 `کارت دسترسی` 显示区域不足，实际显示会被裁剪或错位，表现为类似 `شرب دسترسی` 的异常文本；输入进入设置密码时，如果连续三次密码错误，倒计时提示在英语 `Please wait %d seconds` 下正常，但波斯语会出现大量方框字符，只能看到数字部分。
+
+### 问题原因：
+
+设置页卡管理文本沿用了英语短文本坐标和宽度，波斯语文本更长且需要按 RTL 视觉方向显示，旧区域过窄并可能压到右侧焦点箭头。密码三次错误倒计时提示原先在代码里硬编码英语字符串，没有进入 `language.c` 的多语言表，也没有给波斯语预留更宽的显示区域。
+
+### 解决方法：
+
+为密码等待倒计时新增多语言字符串，波斯语下使用 `لطفا %d ثانیه صبر کنید` 并扩大显示区域；设置页 `کارت دسترسی` 在波斯语下使用独立坐标、更宽文本框、较小字号和右对齐显示，同时限制右边界不覆盖焦点箭头。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/language.c`
+- `app_cu_datin/system/layout/language.h`
+- `app_cu_datin/system/layout/layout_password.c`
+- `app_cu_datin/system/layout/layout_settings.c`
+
+### 具体修改：
+
+- 新增 `STR_PASSWORD_WAIT_SECONDS`，将 `Please wait %d seconds` 纳入多语言表。
+- `language.c` 增加波斯语等待提示 `لطفا %d ثانیه صبر کنید`。
+- `display_delay_message()` 改为通过 `font_str(STR_PASSWORD_WAIT_SECONDS)` 获取模板，不再硬编码英语。
+- 波斯语密码等待提示区域从英语区域扩展为 `{{70, 150}, {340, 40}}`，避免长文本显示不全。
+- `set_card_set_font_display()` 在波斯语下改用 `{{300, 96}, {120, 30}}`、字号 `18`、`RIGHT_MIDDLE` 对齐。
+- 设置页波斯语卡管理文本会按右侧焦点箭头位置动态限制宽度，避免文字覆盖箭头。
 
 
 ## 2026-06-05（RFID TAG 单删状态返回和 ERASE 三态文案）
