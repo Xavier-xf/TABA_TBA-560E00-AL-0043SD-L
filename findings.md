@@ -174,3 +174,10 @@
 - 监控/通话结束路径集中在 `monitor_status_check()`：`INT_READ_MONITOR_STATUS` 800ms 收尾和 `INT_TALK` 2 分钟超时强制关闭都会关闭摄像头和咪头，但旧代码没有关闭功放。
 - 不能在结束路径直接 `ak_sleep_ms(2000)` 后再打开功放，因为这会阻塞 `intercom_event_detect()`，影响 CAN 收包、心跳发送/避让和业务状态释放。
 - 修复边界应放在 `intercom.c` 内：关闭输出时同步关功放并记录时间，后续由事件循环轮询 2 秒恢复；如果 2 秒内重新开始通话，开始流程取消 pending 并立即打开功放。
+
+## Output 房号设置页重复错误后按键锁定
+- 用户场景发生在 Output 输入分支器号后进入的 `layout_home_id_set.c`，不是 `layout_OutPUT.c` 首页。
+- 重复房号校验失败后，`HomeIdSetClass.set_status` 会变成 `HOME_ID_SET_STATUS_FAIL`，`home_id_set_key_up_up()`、`home_id_set_key_down_up()`、`home_id_set_key_ring_up()` 在主层一开始就判断 `set_status != HOME_ID_SET_STATUS_NONE` 并直接 `return`，因此错误提示显示期间上下/确认都被锁住。
+- 数字输入路径 `home_id_set_add_number()` 没有同样的 `set_status` 拦截，所以用户会感觉“只能重新输入，不能上下移动”。
+- 只在按键时清掉 `set_status` 还不够；重复错误后 `home_id_input_dirty[]` 仍然为 true，提示消失后上下移动会再次尝试保存同一个错误值并再次失败，表现为持续被卡住。
+- 房号设置页 `home_id_set_key_star_up()` 当前无条件 `os_layout_goto(&layout_OutPUT)`，没有像 Output 首页一样先判断当前输入框是否有输入，也没有调用已有 `home_id_set_sub_number()`，所以按 X 会直接退出而不是删除一位。

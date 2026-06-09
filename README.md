@@ -128,6 +128,38 @@ cd app_cu_datin
 - 建议每次重要改动后使用 `./autobuild.sh -bk` 备份代码
 
 
+## 2026-06-09（Output 房号设置页错误后按键和 X 删除行为修正）
+
+### 问题描述：
+
+在 Output 中输入分支器号后进入房号设置页，读到房号如 `9,10,11,12`，如果把其中一个房号改成重复房号，例如把 `10` 改成 `9`，系统会正确报错变黄并显示 fail，但报错后无法再通过上/下键移动焦点。另一个问题是房号输入框中已有数字时，按 `X/*` 应先删除一位，删完后再退出当前页，但旧逻辑会直接退出。
+
+### 问题原因：
+
+问题发生在 `layout_home_id_set.c`。重复房号或已存在校验失败后，`HomeIdSetClass.set_status` 会进入失败状态，而上/下/确认键在主层检测到 `set_status != HOME_ID_SET_STATUS_NONE` 后直接返回，导致错误提示显示期间焦点移动被锁住。同时，失败后当前输入框的 dirty 状态没有清除，提示消失后移动焦点仍可能再次保存同一个错误值并再次失败。`home_id_set_key_star_up()` 原先无条件返回 Output，没有先处理当前输入框退格。
+
+### 解决方法：
+
+将失败/已存在提示改为可被按键关闭的非阻塞提示，上/下/确认/X 操作会先关闭当前错误提示，再继续正常处理焦点移动或返回逻辑；重复房号或已存在校验失败时清除当前输入框 dirty，避免同一个错误值反复阻塞移动；`X/*` 在当前输入框有内容时先删除一位并重画输入框，删空后再次按才返回 Output。
+
+### 涉及文件：
+
+- `app_cu_datin/system/layout/layout_home_id_set.c`
+- `tests/test_home_id_set_focus_replace.sh`
+- `task_plan.md`
+- `findings.md`
+- `progress.md`
+
+### 具体修改：
+
+- 新增 `home_id_set_status_prompt_close()`，用于关闭失败/已存在提示并清理提示计数和重绘标志。
+- 上/下/确认键进入主层处理时，先调用提示关闭函数，再判断是否仍有不可打断状态。
+- 重复房号或已存在校验失败时清除 `home_id_input_dirty[HomeIdSetClass.cur_focus]`。
+- `home_id_set_sub_number()` 改为删除光标前一位，避免清错下标。
+- `home_id_set_key_star_up()` 改为有输入时先退格并刷新显示，输入为空时才返回 `layout_OutPUT`。
+- 扩展 `tests/test_home_id_set_focus_replace.sh`，锁定错误提示关闭、dirty 清理、退格删除和 `X/*` 退出边界。
+
+
 ## 2026-06-09（大楼机通话结束后功放延时恢复）
 
 ### 问题描述：

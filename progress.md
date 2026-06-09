@@ -764,3 +764,45 @@
   - `git diff --check -- README.md task_plan.md progress.md` 通过。
   - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。
   - `rg -n "波斯语设置页和密码等待提示显示修正|大楼机通话结束后功放延时恢复" README.md` 确认两个新增标题存在。
+
+## 2026-06-09 Output 房号设置页错误后按键和 X 删除行为修正
+- 用户反馈：
+  - Output 输入分支器号后读到房号 `9,10,11,12`，把 `10` 改成重复的 `9` 会正确报错变黄并显示 fail，但报错后无法上下移动。
+  - 房号输入框已有数字时，按 `X/*` 应先删除一位，删完后再退出；当前直接退出。
+- 已按 `superpowers:systematic-debugging` 复核根因：
+  - 问题位于 `app_cu_datin/system/layout/layout_home_id_set.c`。
+  - `HomeIdSetClass.set_status != HOME_ID_SET_STATUS_NONE` 时，上/下/确认键直接 return，导致错误提示显示期间焦点移动被锁住。
+  - 重复/已存在校验失败后 `home_id_input_dirty[]` 未清，提示消失后移动焦点会再次保存同一个错误值。
+  - `home_id_set_key_star_up()` 旧逻辑无条件返回 Output，没有先删除当前输入框数字。
+- 已按 TDD 扩展 `tests/test_home_id_set_focus_replace.sh`：
+  - 校验错误提示关闭 helper 会清状态、计数、重绘标志并擦除状态文字。
+  - 校验上/下/确认键先关闭错误提示再决定是否 return。
+  - 校验重复失败会清当前输入框 dirty。
+  - 校验 `X/*` 有输入时先退格、更新 dirty、重画输入框，空输入时才退出。
+- 已修改：
+  - `app_cu_datin/system/layout/layout_home_id_set.c`：新增 `home_id_set_status_prompt_close()` 和文件级提示计数状态，使失败/已存在提示可被按键关闭，成功提示仍走原定时保存流程。
+  - `app_cu_datin/system/layout/layout_home_id_set.c`：重复房号或已存在校验失败时清当前 dirty，避免同一个错误值反复阻塞焦点移动。
+  - `app_cu_datin/system/layout/layout_home_id_set.c`：修正 `home_id_set_sub_number()` 删除光标前一位，而不是清错误下标。
+  - `app_cu_datin/system/layout/layout_home_id_set.c`：`X/*` 当前输入框有内容时先删除一位，删空后再次按才返回 Output。
+- 已完成验证：
+  - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+  - `bash tests/test_card_prompt_interaction.sh` 通过。
+  - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+  - `bash tests/test_brancher_heartbeat.sh` 通过。
+  - `cd app_cu_datin && make` 通过。
+  - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+  - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+  - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+  - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `598127 bytes`，包头 `# File Parttion: app.sqsh4 0 598016`。
+  - `app_cu_datin/ANYKA37E.BIN` 与 `AK37E_SDK_V1.03/rootfs/resource/app/app/ANYKA37E.BIN` SHA256 一致。
+  - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+## 2026-06-09 README 补充 Output 房号设置页修正记录
+- 用户要求：遵守 Superpowers 和 context-engineering-marketplace 的约定，将本次 Output 房号设置页修改按 `README.md` 既有格式写入。
+- 已在 `README.md` 顶部新增 `2026-06-09（Output 房号设置页错误后按键和 X 删除行为修正）`。
+- 新增内容覆盖：
+  - 重复房号或已存在校验失败后，错误提示不再锁死上/下/确认/X。
+  - 校验失败清 dirty，避免同一个错误值反复阻塞移动。
+  - `X/*` 有输入时先删除一位，删空后再次按才返回 Output。
+  - 涉及文件和静态测试 `tests/test_home_id_set_focus_replace.sh`。
+- 已同步更新 `task_plan.md`，新增阶段 37 并标记完成。

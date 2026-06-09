@@ -553,3 +553,45 @@
      - `git diff --check -- README.md task_plan.md progress.md` 通过。
      - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。
      - `rg -n "波斯语设置页和密码等待提示显示修正|大楼机通话结束后功放延时恢复" README.md` 确认两个新增标题存在。
+
+36. [complete] Output 房号设置页错误后按键和 X 删除行为修正
+   - 用户反馈：
+     - 在 Output 中输入分支器号读到房号 `9,10,11,12` 后，将 `10` 改成 `9` 会正确报错变黄并显示 fail，但报错后无法上下移动。
+     - 房号输入框已输入数字时，按 X 应先删除一位，删完后再退出；当前会直接退出。
+   - 当前发现：
+     - 问题实际位于 `app_cu_datin/system/layout/layout_home_id_set.c`。
+     - `set_status != NONE` 时上/下/确认直接 return，导致错误提示期间焦点被锁住。
+     - 重复校验失败后 dirty 仍保留，即使提示消失也会反复保存同一个错误值。
+     - `home_id_set_key_star_up()` 无条件返回 Output，没有先退格。
+   - 已修复：
+     - 错误/已存在提示支持上/下/确认/X 先关闭，成功提示仍保留原定时保存流程。
+     - 重复房号或已存在校验失败时清当前输入框 dirty，避免同一个错误值反复阻塞焦点移动。
+     - `home_id_set_sub_number()` 改为删除光标前一位，修正原先删除位置不对的问题。
+     - `X/*` 在当前输入框有内容时先删除一位并重画输入框，删空后再次按才返回 Output。
+   - 已完成验证：
+     - `bash tests/test_home_id_set_focus_replace.sh` 通过。
+     - `bash tests/test_card_prompt_interaction.sh` 通过。
+     - `bash tests/test_intercom_heartbeat_deferral.sh` 通过。
+     - `bash tests/test_brancher_heartbeat.sh` 通过。
+     - `cd app_cu_datin && make` 通过。
+     - `cd app_cu_datin && ./autobuild.sh -all-sdk` 通过；沙箱内 `mkfs.jffs2` 仍打印已知“错误的系统调用”，但 APP 编译、SDK 拷贝和 `app.sqsh4` 生成成功。
+     - 已在沙箱外重建 `AK37E_SDK_V1.03/upgrade/platform/config.jffs2`、`data.jffs2`、`tuya.jffs2`。
+     - `cd AK37E_SDK_V1.03/upgrade && export upgrade_bin_version=$(date +%Y%m%d%H%M%S) && ./partition_image.sh app_resource` 通过。
+     - APP-only 升级包：`AK37E_SDK_V1.03/upgrade/HALL_MACHINEOS`，大小 `598127 bytes`。
+     - 包头：`# File Parttion: app.sqsh4 0 598016`。
+     - 本地 `app_cu_datin/ANYKA37E.BIN` 与 SDK `rootfs/resource/app/app/ANYKA37E.BIN` SHA256 一致。
+     - `app_cu_datin/autobuild.sh` 和 `AK37E_SDK_V1.03/upgrade/make_image.sh` 无 diff。
+
+37. [complete] README 补充 Output 房号设置页修正记录
+   - 用户要求：
+     - 遵守 Superpowers 和 context-engineering-marketplace 的约定，将本次 Output 房号设置页修正按 README 既有格式写入 `README.md`。
+   - 已补充：
+     - `2026-06-09（Output 房号设置页错误后按键和 X 删除行为修正）`。
+   - 覆盖范围：
+     - 重复房号/已存在错误提示不再锁死上/下/确认/X 操作。
+     - 校验失败后清 dirty，避免同一个错误值反复阻塞焦点移动。
+     - `X/*` 在输入框有内容时先删除一位，删空后再次按才返回 Output。
+   - 验证：
+     - `git diff --check -- README.md task_plan.md progress.md findings.md` 通过。
+     - `rg -n "Output 房号设置页错误后按键和 X 删除行为修正" README.md task_plan.md progress.md` 确认记录存在。
+     - `git diff -- app_cu_datin/autobuild.sh AK37E_SDK_V1.03/upgrade/make_image.sh` 无输出，确认未改编译脚本。
